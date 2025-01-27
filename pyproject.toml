@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "prod-health-guardian"
+version = "0.1.0"
+description = "Production Health Monitoring System"
+authors = ["Yang Yang <gwingyy@gmail.com>"]
+readme = "README.md"
+packages = [{include = "prod_health_guardian", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+fastapi = "*"
+uvicorn = "*"
+pydantic = "*"
+psutil = "*"
+prometheus-client = "*"
+httpx = "*"
+structlog = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+ruff = "*"
+httpx = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP", "N", "PL", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["prod_health_guardian"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra -q --cov=prod_health_guardian"
+markers = [
+    "system: marks tests that check system-level functionality",
+] 
