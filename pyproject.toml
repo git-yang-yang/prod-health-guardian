@@ -20,6 +20,7 @@ structlog = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
+pytest-asyncio = "*"
 ruff = "*"
 httpx = "*"
 
@@ -43,4 +44,7 @@ python_files = ["test_*.py"]
 addopts = "-ra -q --cov=prod_health_guardian"
 markers = [
     "system: marks tests that check system-level functionality",
-] 
+    "collectors: marks tests for hardware metric collectors",
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function" 
