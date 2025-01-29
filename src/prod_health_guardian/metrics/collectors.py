@@ -1,145 +1,206 @@
 """Metrics collector coordination module."""
 
-from typing import Any
-
-from prometheus_client.core import GaugeMetricFamily
+from prometheus_client import Gauge, generate_latest
 
 from ..collectors.cpu import CPUCollector
 from ..collectors.memory import MemoryCollector
+from ..models.metrics import CPUMetrics, MemoryMetrics, SystemMetrics
 
 
 class MetricsCollector:
-    """Collector for exposing metrics in Prometheus format.
+    """Single entry point for all metrics collection and export.
     
-    This class coordinates multiple collectors and converts their metrics
-    into Prometheus format. It follows the Prometheus collector interface
-    for custom collectors.
+    This class serves as the main coordinator for all metrics collection,
+    formatting, and export. It handles both the collection of raw metrics
+    and their conversion to various formats (e.g., Prometheus).
+
+    The collector follows a unified pattern where:
+    1. Raw metrics are collected from hardware collectors
+    2. Metrics are validated through Pydantic models
+    3. Metrics can be exported in different formats
+    
+    It also implements the Prometheus collector interface for custom collectors,
+    allowing direct registration with the Prometheus registry.
     """
 
     def __init__(self) -> None:
-        """Initialize metrics collector with hardware collectors."""
+        """Initialize metrics collector with hardware collectors and metrics."""
+        # Initialize collectors
         self.cpu_collector = CPUCollector()
         self.memory_collector = MemoryCollector()
 
-    def collect(self) -> list[GaugeMetricFamily]:
-        """Collect all metrics and convert to Prometheus format.
+        # Register Prometheus metrics
+        self._register_metrics()
 
-        This method implements the Prometheus collector interface.
-        It gathers metrics from all collectors and converts them to
-        Prometheus gauge metrics.
-
-        Returns:
-            list[GaugeMetricFamily]: List of Prometheus metrics
+    def _register_metrics(self) -> None:
+        """Register all Prometheus metrics.
+        
+        This method initializes all the Prometheus gauge metrics that will
+        be used to export metrics in Prometheus format.
         """
-        metrics = []
-        
-        # Collect CPU metrics
-        cpu_metrics = self.cpu_collector.collect_metrics()
-        metrics.extend(self._create_cpu_metrics(cpu_metrics))
-        
-        # Collect memory metrics
-        memory_metrics = self.memory_collector.collect_metrics()
-        metrics.extend(self._create_memory_metrics(memory_metrics))
-        
-        return metrics
-
-    def _create_cpu_metrics(
-        self,
-        cpu_metrics: dict[str, Any]
-    ) -> list[GaugeMetricFamily]:
-        """Create Prometheus metrics for CPU data.
-        
-        Args:
-            cpu_metrics: Dictionary containing CPU metrics
-            
-        Returns:
-            list[GaugeMetricFamily]: List of Prometheus CPU metrics
-        """
-        metrics = []
-
-        # CPU Counts
-        cpu_counts = GaugeMetricFamily(
-            'cpu_count',
-            'Number of CPU cores',
-            labels=['type']
+        # CPU Metrics
+        self.cpu_physical_count = Gauge(
+            "cpu_physical_count",
+            "Number of physical CPU cores"
         )
-        cpu_counts.add_metric(['physical'], cpu_metrics['count']['physical'])
-        cpu_counts.add_metric(['logical'], cpu_metrics['count']['logical'])
-        metrics.append(cpu_counts)
-
-        # CPU Frequencies
-        for freq_type in ['current', 'min', 'max']:
-            if cpu_metrics['frequency'][freq_type] is not None:
-                freq = GaugeMetricFamily(
-                    f'cpu_frequency_{freq_type}_mhz',
-                    f'{freq_type.title()} CPU frequency in MHz'
-                )
-                freq.add_metric([], cpu_metrics['frequency'][freq_type])
-                metrics.append(freq)
-
-        # CPU Usage
-        cpu_usage = GaugeMetricFamily(
-            'cpu_percent',
-            'CPU usage percentage',
-            labels=['core']
+        self.cpu_logical_count = Gauge(
+            "cpu_logical_count",
+            "Number of logical CPU cores"
         )
-        cpu_usage.add_metric(['total'], cpu_metrics['percent']['total'])
-        for i, percent in enumerate(cpu_metrics['percent']['per_cpu']):
-            cpu_usage.add_metric([str(i)], percent)
-        metrics.append(cpu_usage)
+        self.cpu_frequency_current = Gauge(
+            "cpu_frequency_current_mhz",
+            "Current CPU frequency in MHz"
+        )
+        self.cpu_frequency_min = Gauge(
+            "cpu_frequency_min_mhz",
+            "Minimum CPU frequency in MHz"
+        )
+        self.cpu_frequency_max = Gauge(
+            "cpu_frequency_max_mhz",
+            "Maximum CPU frequency in MHz"
+        )
+        self.cpu_percent_total = Gauge(
+            "cpu_percent_total",
+            "Total CPU usage percentage"
+        )
+        self.cpu_percent_per_cpu = Gauge(
+            "cpu_percent_per_cpu",
+            "CPU usage percentage per core",
+            ["core"]
+        )
+        self.cpu_ctx_switches = Gauge(
+            "cpu_ctx_switches_total",
+            "Total number of context switches"
+        )
+        self.cpu_interrupts = Gauge(
+            "cpu_interrupts_total",
+            "Total number of interrupts"
+        )
+        self.cpu_soft_interrupts = Gauge(
+            "cpu_soft_interrupts_total",
+            "Total number of soft interrupts"
+        )
+        self.cpu_syscalls = Gauge(
+            "cpu_syscalls_total",
+            "Total number of system calls"
+        )
 
-        # CPU Stats
-        for stat_name, value in cpu_metrics['stats'].items():
-            stat = GaugeMetricFamily(
-                f'cpu_{stat_name}_total',
-                f'Total number of {stat_name.replace("_", " ")}'
-            )
-            stat.add_metric([], value)
-            metrics.append(stat)
+        # Memory Metrics
+        self.memory_virtual_total = Gauge(
+            "memory_virtual_total_bytes",
+            "Total virtual memory in bytes"
+        )
+        self.memory_virtual_available = Gauge(
+            "memory_virtual_available_bytes",
+            "Available virtual memory in bytes"
+        )
+        self.memory_virtual_used = Gauge(
+            "memory_virtual_used_bytes",
+            "Used virtual memory in bytes"
+        )
+        self.memory_virtual_free = Gauge(
+            "memory_virtual_free_bytes",
+            "Free virtual memory in bytes"
+        )
+        self.memory_virtual_percent = Gauge(
+            "memory_virtual_percent",
+            "Virtual memory usage percentage"
+        )
+        self.memory_swap_total = Gauge(
+            "memory_swap_total_bytes",
+            "Total swap memory in bytes"
+        )
+        self.memory_swap_used = Gauge(
+            "memory_swap_used_bytes",
+            "Used swap memory in bytes"
+        )
+        self.memory_swap_free = Gauge(
+            "memory_swap_free_bytes",
+            "Free swap memory in bytes"
+        )
+        self.memory_swap_percent = Gauge(
+            "memory_swap_percent",
+            "Swap memory usage percentage"
+        )
+        self.memory_swap_sin = Gauge(
+            "memory_swap_sin_total",
+            "Total number of memory pages swapped in"
+        )
+        self.memory_swap_sout = Gauge(
+            "memory_swap_sout_total",
+            "Total number of memory pages swapped out"
+        )
 
-        return metrics
-
-    def _create_memory_metrics(
-        self,
-        memory_metrics: dict[str, Any]
-    ) -> list[GaugeMetricFamily]:
-        """Create Prometheus metrics for memory data.
+    async def collect_metrics(self) -> SystemMetrics:
+        """Collect all metrics in our data model format.
         
-        Args:
-            memory_metrics: Dictionary containing memory metrics
-            
+        This method coordinates the collection of metrics from all collectors
+        and validates them through our Pydantic models.
+
         Returns:
-            list[GaugeMetricFamily]: List of Prometheus memory metrics
+            SystemMetrics: Combined system metrics in our data model format.
         """
-        metrics = []
+        # Collect raw metrics
+        cpu_data = await self.cpu_collector.collect()
+        memory_data = await self.memory_collector.collect()
+        
+        # Validate through models
+        return SystemMetrics(
+            cpu=CPUMetrics(**cpu_data),
+            memory=MemoryMetrics(**memory_data)
+        )
 
-        # Virtual Memory
-        for key, value in memory_metrics['virtual'].items():
-            if key == 'percent':
-                name = 'memory_virtual_percent'
-                desc = 'Virtual memory usage percentage'
-            else:
-                name = f'memory_virtual_{key}_bytes'
-                desc = f'{key.title()} virtual memory in bytes'
-            
-            metric = GaugeMetricFamily(name, desc)
-            metric.add_metric([], value)
-            metrics.append(metric)
+    def update_prometheus_metrics(self, metrics: SystemMetrics) -> None:
+        """Update Prometheus metrics from our data model.
+        
+        This method takes our validated metrics model and updates all
+        registered Prometheus gauges.
 
-        # Swap Memory
-        for key, value in memory_metrics['swap'].items():
-            if key == 'percent':
-                name = 'memory_swap_percent'
-                desc = 'Swap memory usage percentage'
-            elif key in ['sin', 'sout']:
-                name = f'memory_swap_{key}_total'
-                desc = f'Total memory pages swapped {key[1:]}'
-            else:
-                name = f'memory_swap_{key}_bytes'
-                desc = f'{key.title()} swap memory in bytes'
-            
-            metric = GaugeMetricFamily(name, desc)
-            metric.add_metric([], value)
-            metrics.append(metric)
+        Args:
+            metrics: Validated system metrics.
+        """
+        # Update CPU metrics
+        self.cpu_physical_count.set(metrics.cpu.count["physical"])
+        self.cpu_logical_count.set(metrics.cpu.count["logical"])
 
-        return metrics 
+        # Update frequencies if available
+        if metrics.cpu.frequency["current"] is not None:
+            self.cpu_frequency_current.set(metrics.cpu.frequency["current"])
+        if metrics.cpu.frequency["min"] is not None:
+            self.cpu_frequency_min.set(metrics.cpu.frequency["min"])
+        if metrics.cpu.frequency["max"] is not None:
+            self.cpu_frequency_max.set(metrics.cpu.frequency["max"])
+
+        # Update CPU usage
+        self.cpu_percent_total.set(metrics.cpu.percent["total"])
+        for i, percent in enumerate(metrics.cpu.percent["per_cpu"]):
+            self.cpu_percent_per_cpu.labels(core=str(i)).set(percent)
+
+        # Update CPU stats
+        self.cpu_ctx_switches.set(metrics.cpu.stats["ctx_switches"])
+        self.cpu_interrupts.set(metrics.cpu.stats["interrupts"])
+        self.cpu_soft_interrupts.set(metrics.cpu.stats["soft_interrupts"])
+        self.cpu_syscalls.set(metrics.cpu.stats["syscalls"])
+
+        # Update memory metrics
+        self.memory_virtual_total.set(metrics.memory.virtual["total"])
+        self.memory_virtual_available.set(metrics.memory.virtual["available"])
+        self.memory_virtual_used.set(metrics.memory.virtual["used"])
+        self.memory_virtual_free.set(metrics.memory.virtual["free"])
+        self.memory_virtual_percent.set(metrics.memory.virtual["percent"])
+
+        # Update swap metrics
+        self.memory_swap_total.set(metrics.memory.swap["total"])
+        self.memory_swap_used.set(metrics.memory.swap["used"])
+        self.memory_swap_free.set(metrics.memory.swap["free"])
+        self.memory_swap_percent.set(metrics.memory.swap["percent"])
+        self.memory_swap_sin.set(metrics.memory.swap["sin"])
+        self.memory_swap_sout.set(metrics.memory.swap["sout"])
+
+    def get_prometheus_metrics(self) -> bytes:
+        """Get metrics in Prometheus format.
+        
+        Returns:
+            bytes: Prometheus formatted metrics.
+        """
+        return generate_latest() 

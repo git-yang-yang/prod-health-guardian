@@ -210,20 +210,17 @@ The API documentation is available at:
 - OpenAPI UI: `/api/docs`
 - ReDoc UI: `/api/redoc`
 
-## API Endpoints
+### API Endpoints
 
-The service provides the following endpoints:
-
-### System Endpoints
-
-- `GET /`: Redirects to the API documentation
+#### System Endpoints
+- `GET /`: Redirects to API documentation
 - `GET /health`: Health check endpoint
 - `GET /api/docs`: OpenAPI documentation (Swagger UI)
 - `GET /api/redoc`: ReDoc documentation
 
-### Metrics Endpoints
+#### Metrics Endpoints
 
-#### Prometheus Format
+##### Prometheus Format
 
 ```
 GET /metrics
@@ -231,7 +228,7 @@ GET /metrics
 
 This endpoint returns metrics in the Prometheus text format. Available metrics:
 
-##### CPU Metrics
+###### CPU Metrics
 - `cpu_physical_count`: Number of physical CPU cores
 - `cpu_logical_count`: Number of logical CPU cores
 - `cpu_frequency_current_mhz`: Current CPU frequency in MHz
@@ -244,7 +241,7 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `cpu_soft_interrupts_total`: Total software interrupts
 - `cpu_syscalls_total`: Total system calls
 
-##### Memory Metrics
+###### Memory Metrics
 - `memory_virtual_total_bytes`: Total virtual memory in bytes
 - `memory_virtual_available_bytes`: Available virtual memory in bytes
 - `memory_virtual_used_bytes`: Used virtual memory in bytes
@@ -257,7 +254,7 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `memory_swap_sin_total`: Total memory pages swapped in
 - `memory_swap_sout_total`: Total memory pages swapped out
 
-##### GPU Metrics
+###### GPU Metrics
 - `gpu_device_count`: Number of NVIDIA GPUs available
 - `gpu_temperature_celsius{gpu_id="N",name="GPU_NAME"}`: GPU temperature in Celsius
 - `gpu_power_watts{gpu_id="N",name="GPU_NAME"}`: GPU power usage in Watts
@@ -268,7 +265,7 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `gpu_memory_utilization_percent{gpu_id="N",name="GPU_NAME"}`: GPU memory utilization percentage
 - `gpu_fan_speed_percent{gpu_id="N",name="GPU_NAME"}`: GPU fan speed percentage
 
-#### JSON Format
+##### JSON Format
 
 For custom integrations and detailed metrics:
 
@@ -333,3 +330,21 @@ This project uses GitHub Actions for continuous integration:
 - Tests are written using `pytest`
 - Type hints are required for all functions
 - Documentation follows PEP 257
+
+## Architecture
+
+### Metrics Collection
+
+The application uses a modular metrics collection system:
+
+1. **Collectors**: Individual collectors (`CPUCollector`, `MemoryCollector`) gather raw metrics from the system.
+2. **Models**: Pydantic models validate and structure the collected data.
+3. **MetricsCollector**: A central coordinator that:
+   - Manages individual collectors
+   - Validates metrics through models
+   - Converts metrics to various formats (Prometheus, JSON)
+
+The metrics flow is:
+```
+Hardware Collectors -> Pydantic Models -> MetricsCollector -> Prometheus/JSON Export
+```
