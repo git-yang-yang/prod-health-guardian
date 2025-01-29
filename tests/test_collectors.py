@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from prod_health_guardian.collectors.base import MetricCollector
 from prod_health_guardian.collectors.cpu import CPUCollector
 from prod_health_guardian.collectors.memory import MemoryCollector
 
@@ -13,6 +14,33 @@ if TYPE_CHECKING:
 # Constants
 MIN_PERCENT = 0
 MAX_PERCENT = 100
+
+
+class TestCollector(MetricCollector):
+    """Test implementation of MetricCollector."""
+
+    def get_name(self) -> str:
+        """Get collector name.
+
+        Returns:
+            str: Name of the collector.
+        """
+        return "test"
+
+    async def collect(self) -> dict[str, int]:
+        """Collect test metrics.
+
+        Returns:
+            dict[str, int]: Test metrics.
+        """
+        return {"value": 42}
+
+
+def test_base_collector() -> None:
+    """Test base collector functionality."""
+    collector = TestCollector()
+    assert collector.get_name() == "test"
+    assert collector.is_available is True
 
 
 @pytest.mark.collectors
