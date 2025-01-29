@@ -10,7 +10,21 @@ A production health monitoring system designed to monitor and analyze hardware p
 - Prometheus metrics export
 - Alerting system for threshold violations
 
-## Setup
+## Quick Start (Production)
+
+1. Make sure you have Docker and Docker Compose installed.
+
+2. Clone the repository and start all services:
+```bash
+docker-compose up -d
+```
+
+3. Access the services:
+- Production Health Guardian API: http://localhost:8000
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (login with admin/admin)
+
+## Development Setup
 
 1. Install Poetry (if not already installed):
 ```bash
@@ -21,9 +35,6 @@ curl -sSL https://install.python-poetry.org | python3 -
 ```bash
 # Install all dependencies (including dev)
 poetry install
-
-# Install only production dependencies
-poetry install --without dev
 ```
 
 3. Run tests:
@@ -31,25 +42,73 @@ poetry install --without dev
 poetry run pytest
 ```
 
-4. Start the service:
+4. Start the development server:
 ```bash
 poetry run uvicorn prod_health_guardian.api.main:app --reload
 ```
+
+### Development Tools
+
+- Add a new dependency: `poetry add package-name`
+- Add a dev dependency: `poetry add --group dev package-name`
+- Update dependencies: `poetry update`
+- Show dependency tree: `poetry show --tree`
+- Run a command in the virtual environment: `poetry run command`
+- Activate the virtual environment: `poetry shell`
+
+### Local Development Checks
+
+Before pushing your changes, run the local checks script:
+```bash
+./scripts/check.sh
+```
+
+This script will:
+1. Verify Poetry is installed
+2. Install/update dependencies
+3. Run linting with Ruff
+4. Run tests with coverage report
+
+## Project Structure
+
+```
+prod-health-guardian/
+├── config/                # Configuration files
+│   ├── prometheus/       # Prometheus configurations
+│   │   └── prometheus.yml
+│   └── grafana/         # Grafana configurations
+│       ├── datasources.yml
+│       └── dashboard.json
+├── src/
+│   └── prod_health_guardian/
+│       ├── api/         # FastAPI application
+│       ├── collectors/  # Hardware metric collectors
+│       ├── metrics/     # Metrics formatters (Prometheus)
+│       ├── models/      # Data models
+│       └── utils/       # Utility functions
+├── tests/               # Test suite
+├── scripts/            # Development scripts
+├── .github/            # GitHub Actions workflows
+└── pyproject.toml      # Project and dependency configuration
+```
+
+## API Documentation
+
+The API documentation is available at:
+- OpenAPI UI: `/api/docs`
+- ReDoc UI: `/api/redoc`
 
 ## API Endpoints
 
 The service provides both Prometheus and JSON format metrics:
 
-### Prometheus Metrics (Standard)
+### Prometheus Metrics
 
-The standard Prometheus metrics endpoint:
 ```
 GET /metrics
 ```
 
-This endpoint returns metrics in the Prometheus text format, following standard conventions for metric exposition.
-
-Available metrics:
+This endpoint returns metrics in the Prometheus text format. Available metrics:
 
 #### CPU Metrics
 - `cpu_physical_count`: Number of physical CPU cores
@@ -130,71 +189,92 @@ Example JSON response for `/metrics/json`:
 }
 ```
 
-## Prometheus Integration
+## Monitoring Stack
 
-Add the following to your `prometheus.yml`:
+### Configuration Files
 
-```yaml
-scrape_configs:
-  - job_name: 'prod_health_guardian'
-    scrape_interval: 15s
-    static_configs:
-      - targets: ['localhost:8000']
-```
+The monitoring stack configuration is stored in:
 
-## Project Structure
+- `docker-compose.yml`: Main configuration for all services
+- `config/prometheus/prometheus.yml`: Prometheus scraping configuration
+- `config/grafana/datasources.yml`: Grafana datasource configuration
+- `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
 
-```
-prod-health-guardian/
-├── src/
-│   └── prod_health_guardian/
-│       ├── api/            # FastAPI application
-│       ├── collectors/     # Hardware metric collectors
-│       ├── metrics/        # Metrics formatters (Prometheus)
-│       ├── models/         # Data models
-│       └── utils/          # Utility functions
-├── tests/                  # Test suite
-├── scripts/               # Development scripts
-├── .github/               # GitHub Actions workflows
-└── pyproject.toml         # Project and dependency configuration
-```
+### Grafana Dashboard
 
-## Development
+The included Grafana dashboard provides visualizations for:
+- CPU Usage (total and per core)
+- Memory Usage (virtual and swap)
+- System Events (context switches, interrupts)
+- Hardware Information (CPU cores, frequencies)
 
-- Code style is enforced using `ruff`
-- Tests are written using `pytest`
-- Type hints are required for all functions
-- Documentation follows PEP 257
+To import the dashboard:
+1. Log into Grafana (http://localhost:3000) with admin/admin
+2. Go to Dashboards > Import
+3. Upload the JSON file from `config/grafana/grafana-dashboard.json`
 
-### Local Development Checks
+### Manual Setup (Alternative)
 
-Before pushing your changes, run the local checks script:
+If you prefer to run monitoring services individually:
+
+#### Prometheus Setup
+
+Using Docker:
 ```bash
-./scripts/check.sh
+docker run -d \
+    --name prometheus \
+    -p 9090:9090 \
+    -v $(pwd)/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
+    prom/prometheus
 ```
 
-This script will:
-1. Verify Poetry is installed
-2. Install/update dependencies
-3. Run linting with Ruff
-4. Run tests with coverage report
+Or locally with Homebrew:
+```bash
+brew install prometheus
+# Copy config
+cp config/prometheus/prometheus.yml /usr/local/etc/prometheus/prometheus.yml
+# Start service
+brew services start prometheus
+```
 
-The script mimics the CI pipeline checks, helping catch issues before pushing to GitHub.
+#### Grafana Setup
 
-## Using Poetry
+Using Docker:
+```bash
+docker run -d \
+    --name grafana \
+    -p 3000:3000 \
+    -v $(pwd)/config/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml \
+    grafana/grafana
+```
 
-- Add a new dependency: `poetry add package-name`
-- Add a dev dependency: `poetry add --group dev package-name`
-- Update dependencies: `poetry update`
-- Show dependency tree: `poetry show --tree`
-- Run a command in the virtual environment: `poetry run command`
-- Activate the virtual environment: `poetry shell`
+Or locally with Homebrew:
+```bash
+brew install grafana
+# Start service
+brew services start grafana
+```
 
-## API Documentation
+### Troubleshooting
 
-The API documentation is available at:
-- OpenAPI UI: `/api/docs`
-- ReDoc UI: `/api/redoc`
+1. Check service status:
+```bash
+docker-compose ps
+```
+
+2. View service logs:
+```bash
+# All services
+docker-compose logs
+
+# Specific service
+docker-compose logs [service_name]  # app, prometheus, or grafana
+```
+
+3. Common issues:
+- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
+- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
+- For application issues, check the logs with `docker-compose logs app`
 
 ## Continuous Integration
 
@@ -207,3 +287,10 @@ This project uses GitHub Actions for continuous integration:
 - **Python Lint**: Runs on every push and pull request
   - Performs code linting with Ruff
   - Uses Python 3.10
+
+## Development Guidelines
+
+- Code style is enforced using `ruff`
+- Tests are written using `pytest`
+- Type hints are required for all functions
+- Documentation follows PEP 257
