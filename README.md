@@ -4,11 +4,28 @@ A production health monitoring system designed to monitor and analyze hardware p
 
 ## Features
 
-- Hardware telemetry collection (CPU, Memory, Disk, Network)
-- Performance metrics monitoring and analysis
-- RESTful API for metrics access
-- Prometheus metrics export
-- Alerting system for threshold violations
+- Real-time Hardware Metrics Collection
+  - CPU metrics (usage, frequency, cores, context switches)
+  - Memory metrics (virtual and swap memory usage)
+  - Extensible collector architecture for future metrics
+
+- Monitoring Stack Integration
+  - Prometheus metrics export with standard `/metrics` endpoint
+  - Pre-configured Grafana dashboards
+  - Real-time visualization of system performance
+  - Historical data analysis and trending
+
+- Modern API Design
+  - RESTful API with OpenAPI/Swagger documentation
+  - JSON and Prometheus output formats
+  - Async operations for better performance
+  - Comprehensive error handling
+
+- Developer-Friendly
+  - Type-safe Python codebase
+  - Extensive test coverage
+  - Docker and Docker Compose support
+  - CI/CD with GitHub Actions
 
 ## Quick Start (Production)
 
@@ -27,6 +44,34 @@ docker-compose up -d
   - API Documentation: http://localhost:8000/api/docs
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (login with admin/admin)
+
+### Monitoring Dashboard Setup
+
+The monitoring stack comes with pre-configured dashboards for immediate insights:
+
+#### Grafana Dashboards
+The included Grafana dashboard provides:
+- CPU Usage (total and per core)
+- Memory Usage (virtual and swap)
+- System Events (context switches, interrupts)
+- Hardware Information (CPU cores, frequencies)
+
+To access the dashboards:
+1. Open Grafana at http://localhost:3000
+2. Log in with default credentials (admin/admin)
+3. Navigate to Dashboards > Browse
+4. Select "Production Health Guardian Dashboard"
+
+#### Custom Dashboard Import
+If you need to reimport the dashboard:
+1. Go to Dashboards > Import
+2. Upload the JSON file from `config/grafana/grafana-dashboard.json`
+
+#### Prometheus Data Source
+Prometheus is automatically configured as a data source in Grafana. To verify:
+1. Go to Configuration > Data Sources
+2. Check that Prometheus is listed and healthy
+3. Default URL should be `http://prometheus:9090`
 
 ## Development Setup
 
@@ -72,6 +117,69 @@ This script will:
 2. Install/update dependencies
 3. Run linting with Ruff
 4. Run tests with coverage report
+
+## Manual Service Setup
+
+If you prefer to run services individually without Docker Compose:
+
+### Prometheus Setup
+
+Using Docker:
+```bash
+docker run -d \
+    --name prometheus \
+    -p 9090:9090 \
+    -v $(pwd)/config/prometheus:/etc/prometheus \
+    prom/prometheus
+```
+
+Or locally with Homebrew:
+```bash
+brew install prometheus
+# Copy config
+cp config/prometheus/prometheus.yml /usr/local/etc/prometheus/prometheus.yml
+# Start service
+brew services start prometheus
+```
+
+### Grafana Setup
+
+Using Docker:
+```bash
+docker run -d \
+    --name grafana \
+    -p 3000:3000 \
+    -v $(pwd)/config/grafana:/etc/grafana/provisioning \
+    grafana/grafana
+```
+
+Or locally with Homebrew:
+```bash
+brew install grafana
+# Start service
+brew services start grafana
+```
+
+## Troubleshooting
+
+1. Check service status:
+```bash
+docker-compose ps
+```
+
+2. View service logs:
+```bash
+# All services
+docker-compose logs
+
+# Specific service
+docker-compose logs [service_name]  # app, prometheus, or grafana
+```
+
+3. Common issues:
+- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
+- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
+- For application issues, check the logs with `docker-compose logs app`
 
 ## Project Structure
 
@@ -211,82 +319,6 @@ The monitoring stack configuration is stored in:
 - `config/prometheus/prometheus.yml`: Prometheus scraping configuration
 - `config/grafana/datasources.yml`: Grafana datasource configuration
 - `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
-
-### Grafana Dashboard
-
-The included Grafana dashboard provides visualizations for:
-- CPU Usage (total and per core)
-- Memory Usage (virtual and swap)
-- System Events (context switches, interrupts)
-- Hardware Information (CPU cores, frequencies)
-
-To import the dashboard:
-1. Log into Grafana (http://localhost:3000) with admin/admin
-2. Go to Dashboards > Import
-3. Upload the JSON file from `config/grafana/grafana-dashboard.json`
-
-### Manual Setup (Alternative)
-
-If you prefer to run monitoring services individually:
-
-#### Prometheus Setup
-
-Using Docker:
-```bash
-docker run -d \
-    --name prometheus \
-    -p 9090:9090 \
-    -v $(pwd)/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
-    prom/prometheus
-```
-
-Or locally with Homebrew:
-```bash
-brew install prometheus
-# Copy config
-cp config/prometheus/prometheus.yml /usr/local/etc/prometheus/prometheus.yml
-# Start service
-brew services start prometheus
-```
-
-#### Grafana Setup
-
-Using Docker:
-```bash
-docker run -d \
-    --name grafana \
-    -p 3000:3000 \
-    -v $(pwd)/config/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml \
-    grafana/grafana
-```
-
-Or locally with Homebrew:
-```bash
-brew install grafana
-# Start service
-brew services start grafana
-```
-
-### Troubleshooting
-
-1. Check service status:
-```bash
-docker-compose ps
-```
-
-2. View service logs:
-```bash
-# All services
-docker-compose logs
-
-# Specific service
-docker-compose logs [service_name]  # app, prometheus, or grafana
-```
-
-3. Common issues:
-- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
-- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
-- For application issues, check the logs with `docker-compose logs app`
 
 ## Continuous Integration
 
