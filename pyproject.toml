@@ -15,6 +15,7 @@ psutil = "*"
 prometheus-client = "*"
 httpx = "*"
 structlog = "*"
+pynvml = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

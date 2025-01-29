@@ -257,6 +257,17 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `memory_swap_sin_total`: Total memory pages swapped in
 - `memory_swap_sout_total`: Total memory pages swapped out
 
+##### GPU Metrics
+- `gpu_device_count`: Number of NVIDIA GPUs available
+- `gpu_temperature_celsius{gpu_id="N",name="GPU_NAME"}`: GPU temperature in Celsius
+- `gpu_power_watts{gpu_id="N",name="GPU_NAME"}`: GPU power usage in Watts
+- `gpu_memory_total_bytes{gpu_id="N",name="GPU_NAME"}`: Total GPU memory in bytes
+- `gpu_memory_used_bytes{gpu_id="N",name="GPU_NAME"}`: Used GPU memory in bytes
+- `gpu_memory_free_bytes{gpu_id="N",name="GPU_NAME"}`: Free GPU memory in bytes
+- `gpu_utilization_percent{gpu_id="N",name="GPU_NAME"}`: GPU utilization percentage
+- `gpu_memory_utilization_percent{gpu_id="N",name="GPU_NAME"}`: GPU memory utilization percentage
+- `gpu_fan_speed_percent{gpu_id="N",name="GPU_NAME"}`: GPU fan speed percentage
+
 #### JSON Format
 
 For custom integrations and detailed metrics:
@@ -264,8 +275,9 @@ For custom integrations and detailed metrics:
 - `GET /metrics/json`: Get all system metrics in JSON format
 - `GET /metrics/json/cpu`: Get CPU-specific metrics
 - `GET /metrics/json/memory`: Get memory-specific metrics
+- `GET /metrics/json/gpu`: Get GPU-specific metrics
 
-Example JSON response for `/metrics/json`:
+Example JSON response for `/metrics/json/cpu`:
 ```json
 {
   "cpu": {
@@ -287,23 +299,6 @@ Example JSON response for `/metrics/json`:
       "interrupts": 500,
       "soft_interrupts": 200,
       "syscalls": 5000
-    }
-  },
-  "memory": {
-    "virtual": {
-      "total": 16000000000,
-      "available": 8000000000,
-      "used": 7000000000,
-      "free": 1000000000,
-      "percent": 43.75
-    },
-    "swap": {
-      "total": 8000000000,
-      "used": 1000000000,
-      "free": 7000000000,
-      "percent": 12.5,
-      "sin": 100,
-      "sout": 50
     }
   }
 }
