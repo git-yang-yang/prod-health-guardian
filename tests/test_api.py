@@ -11,11 +11,12 @@ from prod_health_guardian import __version__
 from prod_health_guardian.api.main import app
 
 if TYPE_CHECKING:
-    pass  # No type-only imports needed
+    from pytest_mock import MockerFixture
 
 # HTTP Status Codes
 HTTP_200_OK = 200
 HTTP_404_NOT_FOUND = 404
+HTTP_500_INTERNAL_SERVER_ERROR = 500
 
 
 @pytest.fixture
@@ -70,6 +71,29 @@ def test_get_metrics(client: TestClient) -> None:
     assert "memory_swap_total_bytes" in metric_names
 
 
+def test_get_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
+    """Test error handling in the metrics endpoint.
+
+    Args:
+        client: FastAPI test client.
+        mocker: Pytest mocker fixture.
+    """
+    # Mock CPU collector to raise an exception
+    mocker.patch(
+        "prod_health_guardian.collectors.cpu.CPUCollector.collect",
+        side_effect=Exception("Test error")
+    )
+    
+    response = client.get("/metrics")
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers["content-type"] == "application/json"
+    
+    data = response.json()
+    assert "detail" in data
+    assert "Failed to generate Prometheus metrics" in data["detail"]
+    assert "Test error" in data["detail"]
+
+
 def test_get_json_metrics(client: TestClient) -> None:
     """Test the JSON metrics endpoint.
 
@@ -95,6 +119,29 @@ def test_get_json_metrics(client: TestClient) -> None:
     memory = data["memory"]
     assert "virtual" in memory
     assert "swap" in memory
+
+
+def test_get_json_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
+    """Test error handling in the JSON metrics endpoint.
+
+    Args:
+        client: FastAPI test client.
+        mocker: Pytest mocker fixture.
+    """
+    # Mock memory collector to raise an exception
+    mocker.patch(
+        "prod_health_guardian.collectors.memory.MemoryCollector.collect",
+        side_effect=Exception("Test error")
+    )
+    
+    response = client.get("/metrics/json")
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers["content-type"] == "application/json"
+    
+    data = response.json()
+    assert "detail" in data
+    assert "Failed to collect metrics" in data["detail"]
+    assert "Test error" in data["detail"]
 
 
 def test_get_cpu_metrics(client: TestClient) -> None:
@@ -131,6 +178,32 @@ def test_get_memory_metrics(client: TestClient) -> None:
     memory = data["memory"]
     assert "virtual" in memory
     assert "swap" in memory
+
+
+def test_get_collector_metrics_error(
+    client: TestClient,
+    mocker: "MockerFixture",
+) -> None:
+    """Test error handling in the collector metrics endpoint.
+
+    Args:
+        client: FastAPI test client.
+        mocker: Pytest mocker fixture.
+    """
+    # Mock CPU collector to raise an exception
+    mocker.patch(
+        "prod_health_guardian.collectors.cpu.CPUCollector.collect",
+        side_effect=Exception("Test error")
+    )
+    
+    response = client.get("/metrics/json/cpu")
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers["content-type"] == "application/json"
+    
+    data = response.json()
+    assert "detail" in data
+    assert "Failed to collect metrics from cpu" in data["detail"]
+    assert "Test error" in data["detail"]
 
 
 def test_get_invalid_collector_metrics(client: TestClient) -> None:

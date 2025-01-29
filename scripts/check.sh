@@ -24,7 +24,8 @@ if [ ! -f "pyproject.toml" ]; then
 fi
 
 echo -e "${GREEN}1. Installing dependencies...${NC}"
-poetry install --with dev --sync
+poetry install
+poetry sync
 
 echo -e "\n${GREEN}2. Running linting with ruff...${NC}"
 poetry run ruff check .

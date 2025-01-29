@@ -20,7 +20,11 @@ docker-compose up -d
 ```
 
 3. Access the services:
-- Production Health Guardian API: http://localhost:8000
+- Production Health Guardian API:
+  - Root URL (redirects to docs): http://localhost:8000
+  - Metrics (Prometheus format): http://localhost:8000/metrics
+  - Metrics (JSON format): http://localhost:8000/metrics/json
+  - API Documentation: http://localhost:8000/api/docs
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (login with admin/admin)
 
@@ -100,9 +104,18 @@ The API documentation is available at:
 
 ## API Endpoints
 
-The service provides both Prometheus and JSON format metrics:
+The service provides the following endpoints:
 
-### Prometheus Metrics
+### System Endpoints
+
+- `GET /`: Redirects to the API documentation
+- `GET /health`: Health check endpoint
+- `GET /api/docs`: OpenAPI documentation (Swagger UI)
+- `GET /api/redoc`: ReDoc documentation
+
+### Metrics Endpoints
+
+#### Prometheus Format
 
 ```
 GET /metrics
@@ -110,7 +123,7 @@ GET /metrics
 
 This endpoint returns metrics in the Prometheus text format. Available metrics:
 
-#### CPU Metrics
+##### CPU Metrics
 - `cpu_physical_count`: Number of physical CPU cores
 - `cpu_logical_count`: Number of logical CPU cores
 - `cpu_frequency_current_mhz`: Current CPU frequency in MHz
@@ -123,7 +136,7 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `cpu_soft_interrupts_total`: Total software interrupts
 - `cpu_syscalls_total`: Total system calls
 
-#### Memory Metrics
+##### Memory Metrics
 - `memory_virtual_total_bytes`: Total virtual memory in bytes
 - `memory_virtual_available_bytes`: Available virtual memory in bytes
 - `memory_virtual_used_bytes`: Used virtual memory in bytes
@@ -136,14 +149,13 @@ This endpoint returns metrics in the Prometheus text format. Available metrics:
 - `memory_swap_sin_total`: Total memory pages swapped in
 - `memory_swap_sout_total`: Total memory pages swapped out
 
-### JSON Endpoints
+#### JSON Format
 
 For custom integrations and detailed metrics:
 
 - `GET /metrics/json`: Get all system metrics in JSON format
 - `GET /metrics/json/cpu`: Get CPU-specific metrics
 - `GET /metrics/json/memory`: Get memory-specific metrics
-- `GET /health`: Health check endpoint
 
 Example JSON response for `/metrics/json`:
 ```json

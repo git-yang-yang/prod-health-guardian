@@ -3,7 +3,7 @@
 from typing import Union
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 
 from prod_health_guardian import __version__
 from prod_health_guardian.collectors.cpu import CPUCollector
@@ -32,6 +32,23 @@ app = FastAPI(
 # Initialize collectors
 cpu_collector = CPUCollector()
 memory_collector = MemoryCollector()
+
+
+@app.get(
+    "/",
+    tags=["System"],
+    response_class=RedirectResponse,
+    responses={
+        302: {"description": "Redirect to API documentation"},
+    }
+)
+async def root() -> RedirectResponse:
+    """Root endpoint that redirects to API documentation.
+
+    Returns:
+        RedirectResponse: Redirect to the API documentation.
+    """
+    return RedirectResponse(url="/api/docs")
 
 
 @app.get(
