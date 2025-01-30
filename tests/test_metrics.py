@@ -1,5 +1,6 @@
 """Tests for the metrics module."""
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,8 +13,21 @@ from prod_health_guardian.metrics.prometheus import (
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
+
+class AsyncMock:
+    """Helper class to create async mock objects."""
+
+    def __init__(self, return_value):
+        """Initialize with return value."""
+        self.return_value = return_value
+
+    async def __call__(self, *args, **kwargs):
+        """Async call that returns the stored value."""
+        return self.return_value
+
+
 # Test constants
-MEMORY_VIRTUAL_TOTAL = 16_000_000_000.0
+MEMORY_VIRTUAL_TOTAL = 16_000_000_000
 
 
 @pytest.mark.asyncio
@@ -37,31 +51,40 @@ async def test_get_latest_metrics(mocker: "MockerFixture") -> None:
     memory_metrics = {
         "virtual": {
             "total": MEMORY_VIRTUAL_TOTAL,
-            "available": 8000000000,
-            "used": 8000000000,
-            "free": 8000000000,
+            "available": 8_000_000_000,
+            "used": 8_000_000_000,
+            "free": 8_000_000_000,
             "percent": 50.0
         },
         "swap": {
-            "total": 8000000000,
-            "used": 1000000000,
-            "free": 7000000000,
+            "total": 8_000_000_000,
+            "used": 1_000_000_000,
+            "free": 7_000_000_000,
             "percent": 12.5,
             "sin": 100,
             "sout": 50
         }
+    }
+    gpu_metrics = {
+        "device_count": 0,
+        "devices": []
     }
     
     # Mock collector methods
     mocker.patch.object(
         collector.cpu_collector,
         "collect",
-        return_value=cpu_metrics
+        new=AsyncMock(cpu_metrics)
     )
     mocker.patch.object(
         collector.memory_collector,
         "collect",
-        return_value=memory_metrics
+        new=AsyncMock(memory_metrics)
+    )
+    mocker.patch.object(
+        collector.gpu_collector,
+        "collect_metrics",
+        return_value=gpu_metrics
     )
 
     # Get metrics in Prometheus format
@@ -74,16 +97,15 @@ async def test_get_latest_metrics(mocker: "MockerFixture") -> None:
     # CPU metrics - check for presence and values
     assert "# HELP cpu_physical_count" in metrics_text
     assert "# TYPE cpu_physical_count gauge" in metrics_text
-    assert "cpu_physical_count 4" in metrics_text.replace(".0", "")
+    assert "cpu_physical_count 4.0" in metrics_text
     
     # Memory metrics - check for presence and values
     assert "# HELP memory_virtual_total_bytes" in metrics_text
     assert "# TYPE memory_virtual_total_bytes gauge" in metrics_text
     
-    # Find the actual memory metric line
-    for line in metrics_text.split("\n"):
-        if line.startswith("memory_virtual_total_bytes"):
-            assert float(line.split()[1]) == MEMORY_VIRTUAL_TOTAL
-            break
-    else:
-        raise AssertionError("memory_virtual_total_bytes metric not found")
+    pattern = r"memory_virtual_total_bytes\s+([\d.e+-]+)"
+    memory_virtual_match = re.search(pattern, metrics_text)
+    assert memory_virtual_match is not None, (
+        "memory_virtual_total_bytes metric not found"
+    )
+    assert float(memory_virtual_match.group(1)) == float(MEMORY_VIRTUAL_TOTAL)

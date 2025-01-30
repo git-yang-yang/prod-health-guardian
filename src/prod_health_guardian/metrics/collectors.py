@@ -3,8 +3,9 @@
 from prometheus_client import Gauge, generate_latest
 
 from ..collectors.cpu import CPUCollector
+from ..collectors.gpu import GPUCollector
 from ..collectors.memory import MemoryCollector
-from ..models.metrics import CPUMetrics, MemoryMetrics, SystemMetrics
+from ..models.metrics import CPUMetrics, GPUMetrics, MemoryMetrics, SystemMetrics
 
 
 class MetricsCollector:
@@ -28,6 +29,7 @@ class MetricsCollector:
         # Initialize collectors
         self.cpu_collector = CPUCollector()
         self.memory_collector = MemoryCollector()
+        self.gpu_collector = GPUCollector()
 
         # Register Prometheus metrics
         self._register_metrics()
@@ -131,6 +133,52 @@ class MetricsCollector:
             "Total number of memory pages swapped out"
         )
 
+        # GPU Metrics
+        self.gpu_device_count = Gauge(
+            "gpu_device_count",
+            "Number of NVIDIA GPUs available"
+        )
+        self.gpu_temperature = Gauge(
+            "gpu_temperature_celsius",
+            "GPU temperature in Celsius",
+            ["gpu_id", "name"]
+        )
+        self.gpu_power = Gauge(
+            "gpu_power_watts",
+            "GPU power usage in Watts",
+            ["gpu_id", "name"]
+        )
+        self.gpu_memory_total = Gauge(
+            "gpu_memory_total_bytes",
+            "Total GPU memory in bytes",
+            ["gpu_id", "name"]
+        )
+        self.gpu_memory_used = Gauge(
+            "gpu_memory_used_bytes",
+            "Used GPU memory in bytes",
+            ["gpu_id", "name"]
+        )
+        self.gpu_memory_free = Gauge(
+            "gpu_memory_free_bytes",
+            "Free GPU memory in bytes",
+            ["gpu_id", "name"]
+        )
+        self.gpu_utilization = Gauge(
+            "gpu_utilization_percent",
+            "GPU utilization percentage",
+            ["gpu_id", "name"]
+        )
+        self.gpu_memory_utilization = Gauge(
+            "gpu_memory_utilization_percent",
+            "GPU memory utilization percentage",
+            ["gpu_id", "name"]
+        )
+        self.gpu_fan_speed = Gauge(
+            "gpu_fan_speed_percent",
+            "GPU fan speed percentage",
+            ["gpu_id", "name"]
+        )
+
     async def collect_metrics(self) -> SystemMetrics:
         """Collect all metrics in our data model format.
         
@@ -143,11 +191,13 @@ class MetricsCollector:
         # Collect raw metrics
         cpu_data = await self.cpu_collector.collect()
         memory_data = await self.memory_collector.collect()
+        gpu_data = self.gpu_collector.collect_metrics()  # Note: This is not async
         
         # Validate through models
         return SystemMetrics(
             cpu=CPUMetrics(**cpu_data),
-            memory=MemoryMetrics(**memory_data)
+            memory=MemoryMetrics(**memory_data),
+            gpu=GPUMetrics(**gpu_data)
         )
 
     def update_prometheus_metrics(self, metrics: SystemMetrics) -> None:
@@ -196,6 +246,20 @@ class MetricsCollector:
         self.memory_swap_percent.set(metrics.memory.swap["percent"])
         self.memory_swap_sin.set(metrics.memory.swap["sin"])
         self.memory_swap_sout.set(metrics.memory.swap["sout"])
+
+        # Update GPU metrics
+        self.gpu_device_count.set(metrics.gpu.device_count)
+        
+        for i, device in enumerate(metrics.gpu.devices):
+            labels = {"gpu_id": str(i), "name": device.name}
+            self.gpu_temperature.labels(**labels).set(device.temperature)
+            self.gpu_power.labels(**labels).set(device.power_usage)
+            self.gpu_memory_total.labels(**labels).set(device.memory_total)
+            self.gpu_memory_used.labels(**labels).set(device.memory_used)
+            self.gpu_memory_free.labels(**labels).set(device.memory_free)
+            self.gpu_utilization.labels(**labels).set(device.utilization)
+            self.gpu_memory_utilization.labels(**labels).set(device.memory_utilization)
+            self.gpu_fan_speed.labels(**labels).set(device.fan_speed)
 
     def get_prometheus_metrics(self) -> bytes:
         """Get metrics in Prometheus format.
