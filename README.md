@@ -7,6 +7,7 @@ A production health monitoring system designed to monitor and analyze hardware p
 - Real-time Hardware Metrics Collection
   - CPU metrics (usage, frequency, cores, context switches)
   - Memory metrics (virtual and swap memory usage)
+  - GPU metrics (temperature, utilization, memory usage, power)
   - Extensible collector architecture for future metrics
 
 - Monitoring Stack Integration
@@ -91,6 +92,26 @@ poetry install
 poetry run pytest
 ```
 
+### Testing Organization
+
+The test suite is organized into separate files for better maintainability:
+
+- `tests/collectors/test_cpu.py`: CPU collector specific tests
+- `tests/collectors/test_memory.py`: Memory collector specific tests
+- `tests/collectors/test_gpu.py`: GPU collector specific tests
+- `tests/test_collectors.py`: Base collector functionality and integration tests
+
+Each collector has its own test file with:
+- Name validation tests
+- Metrics structure tests
+- Value validation tests
+- Error handling tests
+
+The main `test_collectors.py` contains:
+- Base collector functionality tests
+- Basic integration tests for all collectors
+- Common test utilities and fixtures
+
 4. Start the development server:
 ```bash
 poetry run uvicorn prod_health_guardian.api.main:app --reload
@@ -117,48 +138,6 @@ This script will:
 2. Install/update dependencies
 3. Run linting with Ruff
 4. Run tests with coverage report
-
-## Manual Service Setup
-
-If you prefer to run services individually without Docker Compose:
-
-### Prometheus Setup
-
-Using Docker:
-```bash
-docker run -d \
-    --name prometheus \
-    -p 9090:9090 \
-    -v $(pwd)/config/prometheus:/etc/prometheus \
-    prom/prometheus
-```
-
-Or locally with Homebrew:
-```bash
-brew install prometheus
-# Copy config
-cp config/prometheus/prometheus.yml /usr/local/etc/prometheus/prometheus.yml
-# Start service
-brew services start prometheus
-```
-
-### Grafana Setup
-
-Using Docker:
-```bash
-docker run -d \
-    --name grafana \
-    -p 3000:3000 \
-    -v $(pwd)/config/grafana:/etc/grafana/provisioning \
-    grafana/grafana
-```
-
-Or locally with Homebrew:
-```bash
-brew install grafana
-# Start service
-brew services start grafana
-```
 
 ## Troubleshooting
 
@@ -206,100 +185,25 @@ prod-health-guardian/
 
 ## API Documentation
 
-The API documentation is available at:
-- OpenAPI UI: `/api/docs`
-- ReDoc UI: `/api/redoc`
+The API documentation is available in two different UI formats:
+- OpenAPI UI (Swagger): http://localhost:8000/api/docs
+- ReDoc UI: http://localhost:8000/api/redoc
+
+Choose the UI that best suits your needs - OpenAPI UI for testing and interaction, ReDoc for reading and reference.
 
 ### API Endpoints
 
+The API provides the following main endpoints:
+
 #### System Endpoints
-- `GET /`: Redirects to API documentation
-- `GET /health`: Health check endpoint
-- `GET /api/docs`: OpenAPI documentation (Swagger UI)
-- `GET /api/redoc`: ReDoc documentation
+- Health check and system information
+- API documentation (OpenAPI and ReDoc)
 
 #### Metrics Endpoints
+- Prometheus format: `/metrics`
+- JSON format: `/metrics/json` and specific collector endpoints
 
-##### Prometheus Format
-
-```
-GET /metrics
-```
-
-This endpoint returns metrics in the Prometheus text format. Available metrics:
-
-###### CPU Metrics
-- `cpu_physical_count`: Number of physical CPU cores
-- `cpu_logical_count`: Number of logical CPU cores
-- `cpu_frequency_current_mhz`: Current CPU frequency in MHz
-- `cpu_frequency_min_mhz`: Minimum CPU frequency in MHz
-- `cpu_frequency_max_mhz`: Maximum CPU frequency in MHz
-- `cpu_percent_total`: Total CPU usage percentage
-- `cpu_percent_per_cpu{core="N"}`: CPU usage percentage per core
-- `cpu_ctx_switches_total`: Total context switches
-- `cpu_interrupts_total`: Total hardware interrupts
-- `cpu_soft_interrupts_total`: Total software interrupts
-- `cpu_syscalls_total`: Total system calls
-
-###### Memory Metrics
-- `memory_virtual_total_bytes`: Total virtual memory in bytes
-- `memory_virtual_available_bytes`: Available virtual memory in bytes
-- `memory_virtual_used_bytes`: Used virtual memory in bytes
-- `memory_virtual_free_bytes`: Free virtual memory in bytes
-- `memory_virtual_percent`: Virtual memory usage percentage
-- `memory_swap_total_bytes`: Total swap memory in bytes
-- `memory_swap_used_bytes`: Used swap memory in bytes
-- `memory_swap_free_bytes`: Free swap memory in bytes
-- `memory_swap_percent`: Swap memory usage percentage
-- `memory_swap_sin_total`: Total memory pages swapped in
-- `memory_swap_sout_total`: Total memory pages swapped out
-
-###### GPU Metrics
-- `gpu_device_count`: Number of NVIDIA GPUs available
-- `gpu_temperature_celsius{gpu_id="N",name="GPU_NAME"}`: GPU temperature in Celsius
-- `gpu_power_watts{gpu_id="N",name="GPU_NAME"}`: GPU power usage in Watts
-- `gpu_memory_total_bytes{gpu_id="N",name="GPU_NAME"}`: Total GPU memory in bytes
-- `gpu_memory_used_bytes{gpu_id="N",name="GPU_NAME"}`: Used GPU memory in bytes
-- `gpu_memory_free_bytes{gpu_id="N",name="GPU_NAME"}`: Free GPU memory in bytes
-- `gpu_utilization_percent{gpu_id="N",name="GPU_NAME"}`: GPU utilization percentage
-- `gpu_memory_utilization_percent{gpu_id="N",name="GPU_NAME"}`: GPU memory utilization percentage
-- `gpu_fan_speed_percent{gpu_id="N",name="GPU_NAME"}`: GPU fan speed percentage
-
-##### JSON Format
-
-For custom integrations and detailed metrics:
-
-- `GET /metrics/json`: Get all system metrics in JSON format
-- `GET /metrics/json/cpu`: Get CPU-specific metrics
-- `GET /metrics/json/memory`: Get memory-specific metrics
-- `GET /metrics/json/gpu`: Get GPU-specific metrics
-
-Example JSON response for `/metrics/json/cpu`:
-```json
-{
-  "cpu": {
-    "count": {
-      "physical": 4,
-      "logical": 8
-    },
-    "frequency": {
-      "current": 2400.0,
-      "min": 2200.0,
-      "max": 3200.0
-    },
-    "percent": {
-      "total": 25.5,
-      "per_cpu": [20.0, 30.0, 25.0, 27.0]
-    },
-    "stats": {
-      "ctx_switches": 1000,
-      "interrupts": 500,
-      "soft_interrupts": 200,
-      "syscalls": 5000
-    }
-  }
-}
-```
+For detailed API documentation, parameter descriptions, and response formats, please refer to the OpenAPI documentation at http://localhost:8000/api/docs
 
 ## Monitoring Stack
 
@@ -330,6 +234,27 @@ This project uses GitHub Actions for continuous integration:
 - Tests are written using `pytest`
 - Type hints are required for all functions
 - Documentation follows PEP 257
+
+## Security
+
+### Best Practices
+
+- All API endpoints use HTTPS in production
+- Grafana access is protected by authentication
+- Environment variables are used for sensitive configuration
+- Docker containers run with non-root users
+- Regular dependency updates via Poetry
+
+### Environment Variables
+
+Required environment variables:
+- `GRAFANA_ADMIN_PASSWORD`: Grafana admin password (default: admin)
+- `PROMETHEUS_RETENTION_DAYS`: Data retention period (default: 15)
+
+Optional environment variables:
+- `DEBUG`: Enable debug mode (default: False)
+- `LOG_LEVEL`: Logging level (default: INFO)
+- `API_KEY`: Optional API key for secured endpoints
 
 ## Architecture
 
