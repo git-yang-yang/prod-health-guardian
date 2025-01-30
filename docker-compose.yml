@@ -33,12 +33,14 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./config/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/etc/grafana/dashboards
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/system_metrics.json
     networks:
       - monitoring
     restart: unless-stopped

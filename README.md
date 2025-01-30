@@ -51,26 +51,31 @@ docker-compose up -d
 The monitoring stack configuration is stored in:
 - `docker-compose.yml`: Main configuration for all services
 - `config/prometheus/prometheus.yml`: Prometheus scraping configuration
-- `config/grafana/datasources.yml`: Grafana datasource configuration
-- `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
+- `config/grafana/provisioning/datasources/datasources.yml`: Grafana datasource configuration
+- `config/grafana/provisioning/dashboards/default.yml`: Grafana dashboard provisioning
+- `config/grafana/dashboards/system_metrics.json`: Pre-configured system metrics dashboard
 
 ### Monitoring Dashboard
 
-The system comes with a pre-configured Grafana dashboard that provides:
-- CPU metrics (usage per core, frequency)
-- GPU metrics (temperature, utilization, memory)
-- Memory metrics (virtual and swap usage)
-- System events (context switches, interrupts)
+The system includes a modern, pre-configured Grafana dashboard featuring:
+
+- Real-time System Metrics
+  - CPU Usage Gauge (warning at 70%, critical at 85%)
+  - Memory Usage Gauge (warning at 80%, critical at 90%)
+  - Historical performance trends
+  - Detailed tooltips and legends
+
+![Production Health Guardian Dashboard](docs/images/dashboard-preview.png)
 
 To access the dashboard:
 1. Open Grafana at http://localhost:3000
 2. Log in with default credentials (admin/admin)
 3. Navigate to Dashboards > Browse
-4. Select "Production Health Guardian Dashboard"
+4. Select "System Metrics"
 
 If you need to reimport the dashboard manually:
 1. Go to Dashboards > Import
-2. Upload `config/grafana/grafana-dashboard.json`
+2. Upload `config/grafana/dashboards/system_metrics.json`
 
 ### Troubleshooting
 
