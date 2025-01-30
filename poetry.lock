@@ -277,6 +277,18 @@ files = [
 ]
 
 [[package]]
+name = "nvidia-ml-py"
+version = "12.570.86"
+description = "Python Bindings for the NVIDIA Management Library"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "nvidia_ml_py-12.570.86-py3-none-any.whl", hash = "sha256:58907de35a845abd13dcb227f18298f3b5dd94a72d04c9e594e77711e95c0b51"},
+    {file = "nvidia_ml_py-12.570.86.tar.gz", hash = "sha256:0508d4a0c7b6d015cf574530b95a62ed4fc89da3b8b47e1aefe6777db170ec8b"},
+]
+
+[[package]]
 name = "packaging"
 version = "24.2"
 description = "Core utilities for Python packages"
@@ -483,6 +495,24 @@ files = [
 
 [package.dependencies]
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
+
+[[package]]
+name = "pynvml"
+version = "12.0.0"
+description = "Python utilities for the NVIDIA Management Library"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pynvml-12.0.0-py3-none-any.whl", hash = "sha256:fdff84b62a27dbe98e08e1a647eb77342bef1aebe0878bcd15e99a83fcbecb9e"},
+    {file = "pynvml-12.0.0.tar.gz", hash = "sha256:299ce2451a6a17e6822d6faee750103e25b415f06f59abb8db65d30f794166f5"},
+]
+
+[package.dependencies]
+nvidia-ml-py = ">=12.0.0,<13.0.0a0"
+
+[package.extras]
+test = ["pytest (>=3.6)", "pytest-cov", "pytest-runner"]
 
 [[package]]
 name = "pytest"
@@ -722,4 +752,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9"
-content-hash = "18a4913cac26638979299325b2e28d0048e97bc70c828f07d8574fa9dcd09830"
+content-hash = "b7d260c60d18b4d2437354a25c92a686fd734f683baf4a56019460128b3b62b0"

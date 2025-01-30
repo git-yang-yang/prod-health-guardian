@@ -9,9 +9,8 @@ from prod_health_guardian import __version__
 from prod_health_guardian.collectors.cpu import CPUCollector
 from prod_health_guardian.collectors.memory import MemoryCollector
 from prod_health_guardian.metrics import (
+    get_collector,
     get_latest_metrics,
-    update_cpu_metrics,
-    update_memory_metrics,
 )
 from prod_health_guardian.models import (
     CPUMetrics,
@@ -23,7 +22,7 @@ from prod_health_guardian.models import (
 
 app = FastAPI(
     title="Production Health Guardian",
-    description="A production health monitoring system",
+    description="API for monitoring system health and metrics",
     version=__version__,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -32,6 +31,9 @@ app = FastAPI(
 # Initialize collectors
 cpu_collector = CPUCollector()
 memory_collector = MemoryCollector()
+
+# Initialize metrics collector
+metrics_collector = get_collector()
 
 
 @app.get(
@@ -65,14 +67,24 @@ async def health_check() -> HealthStatus:
     Returns:
         HealthStatus: Status of the service including version and system info.
     """
-    return HealthStatus(
-        status="healthy",
-        version=__version__,
-        system={
-            "api": "running",
-            "collectors": "ready"
-        }
-    )
+    try:
+        # Try to collect metrics from all collectors
+        await cpu_collector.collect()
+        await memory_collector.collect()
+        
+        return HealthStatus(
+            status="healthy",
+            version=__version__,
+            system={
+                "api": "running",
+                "collectors": "ready"
+            }
+        )
+    except Exception as e:
+        return HealthStatus(
+            status="unhealthy",
+            error=f"{e!s}"
+        )
 
 
 @app.get(
@@ -88,38 +100,28 @@ async def health_check() -> HealthStatus:
     }
 )
 async def get_metrics() -> Response:
-    """Get metrics in Prometheus format.
+    """Get system metrics in Prometheus format.
     
-    This is the standard Prometheus metrics endpoint that returns metrics
-    in the Prometheus text-based format for scraping.
-
+    This endpoint returns all system metrics in Prometheus text format,
+    suitable for scraping by Prometheus.
+    
     Returns:
-        Response: Prometheus formatted metrics.
-
+        Response: Prometheus formatted metrics
+        
     Raises:
-        HTTPException: If metrics collection or formatting fails.
+        HTTPException: If metrics collection fails
     """
     try:
-        # Collect and validate metrics using models
-        cpu_data = await cpu_collector.collect()
-        memory_data = await memory_collector.collect()
-        
-        cpu_metrics = CPUMetrics(**cpu_data)
-        memory_metrics = MemoryMetrics(**memory_data)
-        
-        # Update Prometheus metrics
-        update_cpu_metrics(cpu_metrics.model_dump())
-        update_memory_metrics(memory_metrics.model_dump())
-        
-        # Return metrics in Prometheus format
+        # Get metrics in Prometheus format
+        metrics = await get_latest_metrics()
         return Response(
-            content=get_latest_metrics(),
+            content=metrics,
             media_type="text/plain"
         )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate Prometheus metrics: {e!s}"
+            detail="Failed to generate Prometheus metrics"
         ) from e
 
 
@@ -134,21 +136,18 @@ async def get_metrics() -> Response:
 )
 async def get_json_metrics() -> SystemMetrics:
     """Get system metrics in JSON format.
-
+    
+    This endpoint returns all system metrics in a structured JSON format,
+    validated through Pydantic models.
+    
     Returns:
-        SystemMetrics: Combined metrics from all collectors.
-
+        SystemMetrics: Combined system metrics
+        
     Raises:
-        HTTPException: If metrics collection fails.
+        HTTPException: If metrics collection fails
     """
     try:
-        cpu_data = await cpu_collector.collect()
-        memory_data = await memory_collector.collect()
-        
-        return SystemMetrics(
-            cpu=CPUMetrics(**cpu_data),
-            memory=MemoryMetrics(**memory_data)
-        )
+        return await metrics_collector.collect_metrics()
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -172,36 +171,35 @@ async def get_json_metrics() -> SystemMetrics:
 async def get_collector_metrics(
     collector: str
 ) -> dict[str, Union[CPUMetrics, MemoryMetrics]]:
-    """Get metrics from a specific collector in JSON format.
-
+    """Get metrics from a specific collector.
+    
+    This endpoint returns metrics from a single collector in JSON format.
+    
     Args:
-        collector: Name of the collector to get metrics from.
-
+        collector: Name of the collector (cpu or memory)
+        
     Returns:
-        dict[str, Union[CPUMetrics, MemoryMetrics]]: Metrics from the
-            specified collector.
-
+        dict: Collector metrics
+        
     Raises:
-        HTTPException: If collector not found or metrics collection fails.
+        HTTPException: If collector doesn't exist or metrics collection fails
     """
-    collectors = {
-        "cpu": (cpu_collector, CPUMetrics),
-        "memory": (memory_collector, MemoryMetrics),
-    }
-    
-    if collector not in collectors:
-        available = list(collectors.keys())
-        raise HTTPException(
-            status_code=404,
-            detail=f"Collector '{collector}' not found. Available: {available}"
-        )
-    
     try:
-        collector_instance, model_class = collectors[collector]
-        metrics = await collector_instance.collect()
-        return {collector: model_class(**metrics)}
+        if collector == "cpu":
+            data = await cpu_collector.collect()
+            return {"cpu": CPUMetrics(**data)}
+        elif collector == "memory":
+            data = await memory_collector.collect()
+            return {"memory": MemoryMetrics(**data)}
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Collector '{collector}' not found"
+            )
+    except HTTPException as e:
+        raise e from None
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to collect metrics from {collector}: {e!s}"
+            detail=f"Failed to collect metrics from {collector}"
         ) from e

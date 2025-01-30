@@ -90,8 +90,7 @@ def test_get_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
     
     data = response.json()
     assert "detail" in data
-    assert "Failed to generate Prometheus metrics" in data["detail"]
-    assert "Test error" in data["detail"]
+    assert data["detail"] == "Failed to generate Prometheus metrics"
 
 
 def test_get_json_metrics(client: TestClient) -> None:
@@ -202,8 +201,7 @@ def test_get_collector_metrics_error(
     
     data = response.json()
     assert "detail" in data
-    assert "Failed to collect metrics from cpu" in data["detail"]
-    assert "Test error" in data["detail"]
+    assert data["detail"] == "Failed to collect metrics from cpu"
 
 
 def test_get_invalid_collector_metrics(client: TestClient) -> None:
