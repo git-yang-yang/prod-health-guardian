@@ -51,8 +51,9 @@ docker-compose up -d
 The monitoring stack configuration is stored in:
 - `docker-compose.yml`: Main configuration for all services
 - `config/prometheus/prometheus.yml`: Prometheus scraping configuration
-- `config/grafana/datasources.yml`: Grafana datasource configuration
-- `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
+- `config/grafana/provisioning/datasources/datasources.yml`: Grafana datasource configuration
+- `config/grafana/provisioning/dashboards/default.yml`: Grafana dashboard provisioning
+- `config/grafana/dashboards/system_metrics.json`: Pre-configured system metrics dashboard
 
 ### Monitoring Dashboard
 
