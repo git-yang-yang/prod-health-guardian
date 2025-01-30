@@ -46,6 +46,14 @@ docker-compose up -d
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (login with admin/admin)
 
+### Configuration Files
+
+The monitoring stack configuration is stored in:
+- `docker-compose.yml`: Main configuration for all services
+- `config/prometheus/prometheus.yml`: Prometheus scraping configuration
+- `config/grafana/datasources.yml`: Grafana datasource configuration
+- `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
+
 ### Monitoring Dashboard
 
 The system comes with a pre-configured Grafana dashboard that provides:
@@ -64,7 +72,30 @@ If you need to reimport the dashboard manually:
 1. Go to Dashboards > Import
 2. Upload `config/grafana/grafana-dashboard.json`
 
-## Development Setup
+### Troubleshooting
+
+1. Check service status:
+```bash
+docker-compose ps
+```
+
+2. View service logs:
+```bash
+# All services
+docker-compose logs
+
+# Specific service
+docker-compose logs [service_name]  # app, prometheus, or grafana
+```
+
+3. Common issues:
+- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
+- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
+- For application issues, check the logs with `docker-compose logs app`
+
+## Development
+
+### Setup
 
 1. Install Poetry (if not already installed):
 ```bash
@@ -99,6 +130,13 @@ The server will be available at http://localhost:8000 with hot-reload enabled fo
 - Run a command in the virtual environment: `poetry run command`
 - Activate the virtual environment: `poetry shell`
 
+### Development Guidelines
+
+- Code style is enforced using `ruff`
+- Tests are written using `pytest`
+- Type hints are required for all functions
+- Documentation follows PEP 257
+
 ### Local Development Checks
 
 Before pushing your changes, run the local checks script:
@@ -111,27 +149,6 @@ This script will:
 2. Install/update dependencies
 3. Run linting with Ruff
 4. Run tests with coverage report
-
-## Troubleshooting
-
-1. Check service status:
-```bash
-docker-compose ps
-```
-
-2. View service logs:
-```bash
-# All services
-docker-compose logs
-
-# Specific service
-docker-compose logs [service_name]  # app, prometheus, or grafana
-```
-
-3. Common issues:
-- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
-- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
-- For application issues, check the logs with `docker-compose logs app`
 
 ## Project Structure
 
@@ -189,6 +206,27 @@ The monitoring stack configuration is stored in:
 - `config/grafana/datasources.yml`: Grafana datasource configuration
 - `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
 
+### Troubleshooting
+
+1. Check service status:
+```bash
+docker-compose ps
+```
+
+2. View service logs:
+```bash
+# All services
+docker-compose logs
+
+# Specific service
+docker-compose logs [service_name]  # app, prometheus, or grafana
+```
+
+3. Common issues:
+- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
+- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
+- For application issues, check the logs with `docker-compose logs app`
+
 ## Continuous Integration
 
 This project uses GitHub Actions for continuous integration:
@@ -200,13 +238,6 @@ This project uses GitHub Actions for continuous integration:
 - **Python Lint**: Runs on every push and pull request
   - Performs code linting with Ruff
   - Uses Python 3.10
-
-## Development Guidelines
-
-- Code style is enforced using `ruff`
-- Tests are written using `pytest`
-- Type hints are required for all functions
-- Documentation follows PEP 257
 
 ## Security
 
