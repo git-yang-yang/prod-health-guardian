@@ -56,11 +56,13 @@ The monitoring stack configuration is stored in:
 
 ### Monitoring Dashboard
 
-The system comes with a pre-configured Grafana dashboard that provides:
+The system comes with a pre-configured Grafana dashboard that provides real-time monitoring of:
 - CPU metrics (usage per core, frequency)
 - GPU metrics (temperature, utilization, memory)
 - Memory metrics (virtual and swap usage)
 - System events (context switches, interrupts)
+
+![Production Health Guardian Dashboard](docs/images/dashboard-preview.png)
 
 To access the dashboard:
 1. Open Grafana at http://localhost:3000
