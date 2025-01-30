@@ -195,38 +195,6 @@ The API provides the following main endpoints:
 
 For detailed API documentation, parameter descriptions, and response formats, please refer to the OpenAPI documentation at http://localhost:8000/api/docs
 
-## Monitoring Stack
-
-### Configuration Files
-
-The monitoring stack configuration is stored in:
-
-- `docker-compose.yml`: Main configuration for all services
-- `config/prometheus/prometheus.yml`: Prometheus scraping configuration
-- `config/grafana/datasources.yml`: Grafana datasource configuration
-- `config/grafana/grafana-dashboard.json`: Pre-configured Grafana dashboard
-
-### Troubleshooting
-
-1. Check service status:
-```bash
-docker-compose ps
-```
-
-2. View service logs:
-```bash
-# All services
-docker-compose logs
-
-# Specific service
-docker-compose logs [service_name]  # app, prometheus, or grafana
-```
-
-3. Common issues:
-- If Grafana can't connect to Prometheus, ensure both services are on the same Docker network
-- If metrics aren't showing, check Prometheus targets at http://localhost:9090/targets
-- For application issues, check the logs with `docker-compose logs app`
-
 ## Continuous Integration
 
 This project uses GitHub Actions for continuous integration:
