@@ -6,8 +6,8 @@ A production health monitoring system designed to monitor and analyze hardware p
 
 - Real-time Hardware Metrics Collection
   - CPU metrics (usage, frequency, cores, context switches)
-  - Memory metrics (virtual and swap memory usage)
   - GPU metrics (temperature, utilization, memory usage, power)
+  - Memory metrics (virtual and swap memory usage)
   - Extensible collector architecture for future metrics
 
 - Monitoring Stack Integration
@@ -18,7 +18,7 @@ A production health monitoring system designed to monitor and analyze hardware p
 
 - Modern API Design
   - RESTful API with OpenAPI/Swagger documentation
-  - JSON and Prometheus output formats
+  - Prometheus and JSON output formats
   - Async operations for better performance
   - Comprehensive error handling
 
@@ -46,33 +46,23 @@ docker-compose up -d
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (login with admin/admin)
 
-### Monitoring Dashboard Setup
+### Monitoring Dashboard
 
-The monitoring stack comes with pre-configured dashboards for immediate insights:
+The system comes with a pre-configured Grafana dashboard that provides:
+- CPU metrics (usage per core, frequency)
+- GPU metrics (temperature, utilization, memory)
+- Memory metrics (virtual and swap usage)
+- System events (context switches, interrupts)
 
-#### Grafana Dashboards
-The included Grafana dashboard provides:
-- CPU Usage (total and per core)
-- Memory Usage (virtual and swap)
-- System Events (context switches, interrupts)
-- Hardware Information (CPU cores, frequencies)
-
-To access the dashboards:
+To access the dashboard:
 1. Open Grafana at http://localhost:3000
 2. Log in with default credentials (admin/admin)
 3. Navigate to Dashboards > Browse
 4. Select "Production Health Guardian Dashboard"
 
-#### Custom Dashboard Import
-If you need to reimport the dashboard:
+If you need to reimport the dashboard manually:
 1. Go to Dashboards > Import
-2. Upload the JSON file from `config/grafana/grafana-dashboard.json`
-
-#### Prometheus Data Source
-Prometheus is automatically configured as a data source in Grafana. To verify:
-1. Go to Configuration > Data Sources
-2. Check that Prometheus is listed and healthy
-3. Default URL should be `http://prometheus:9090`
+2. Upload `config/grafana/grafana-dashboard.json`
 
 ## Development Setup
 
@@ -92,30 +82,13 @@ poetry install
 poetry run pytest
 ```
 
-### Testing Organization
-
-The test suite is organized into separate files for better maintainability:
-
-- `tests/collectors/test_cpu.py`: CPU collector specific tests
-- `tests/collectors/test_memory.py`: Memory collector specific tests
-- `tests/collectors/test_gpu.py`: GPU collector specific tests
-- `tests/test_collectors.py`: Base collector functionality and integration tests
-
-Each collector has its own test file with:
-- Name validation tests
-- Metrics structure tests
-- Value validation tests
-- Error handling tests
-
-The main `test_collectors.py` contains:
-- Base collector functionality tests
-- Basic integration tests for all collectors
-- Common test utilities and fixtures
-
-4. Start the development server:
+4. Start the local development server:
 ```bash
+# Starts the FastAPI server with hot-reload enabled
 poetry run uvicorn prod_health_guardian.api.main:app --reload
 ```
+
+The server will be available at http://localhost:8000 with hot-reload enabled for development.
 
 ### Development Tools
 
