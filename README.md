@@ -56,11 +56,17 @@ The monitoring stack configuration is stored in:
 
 ### Monitoring Dashboard
 
-The system comes with a pre-configured Grafana dashboard that provides real-time monitoring of:
-- CPU metrics (usage per core, frequency)
-- GPU metrics (temperature, utilization, memory)
-- Memory metrics (virtual and swap usage)
-- System events (context switches, interrupts)
+The system includes a modern, pre-configured Grafana dashboard featuring:
+
+- Real-time System Metrics
+  - CPU Usage Gauge with threshold alerts (warning at 70%, critical at 85%)
+  - Memory Usage Gauge with capacity warnings
+  - Historical performance trends
+
+- Interactive Visualizations
+  - Time-series graphs with zoom capabilities
+  - Color-coded performance indicators
+  - Detailed tooltips and legends
 
 ![Production Health Guardian Dashboard](docs/images/dashboard-preview.png)
 
@@ -68,11 +74,11 @@ To access the dashboard:
 1. Open Grafana at http://localhost:3000
 2. Log in with default credentials (admin/admin)
 3. Navigate to Dashboards > Browse
-4. Select "Production Health Guardian Dashboard"
+4. Select "System Metrics"
 
 If you need to reimport the dashboard manually:
 1. Go to Dashboards > Import
-2. Upload `config/grafana/grafana-dashboard.json`
+2. Upload `config/grafana/dashboards/system_metrics.json`
 
 ### Troubleshooting
 
