@@ -59,11 +59,9 @@ The monitoring stack configuration is stored in:
 The system includes a modern, pre-configured Grafana dashboard featuring:
 
 - Real-time System Metrics
-  - CPU Usage Gauge with threshold alerts (warning at 70%, critical at 85%)
-  - Memory Usage Gauge with capacity warnings
+  - CPU Usage Gauge (warning at 70%, critical at 85%)
+  - Memory Usage Gauge (warning at 80%, critical at 90%)
   - Historical performance trends
-
-- Interactive Visualizations
   - Time-series graphs with zoom capabilities
   - Color-coded performance indicators
   - Detailed tooltips and legends
