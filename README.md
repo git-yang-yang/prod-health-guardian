@@ -234,7 +234,7 @@ Optional environment variables:
 
 The application uses a modular metrics collection system:
 
-1. **Collectors**: Individual collectors (`CPUCollector`, `MemoryCollector`) gather raw metrics from the system.
+1. **Collectors**: Individual collectors (e.g. `CPUCollector`) gather raw metrics from the system.
 2. **Models**: Pydantic models validate and structure the collected data.
 3. **MetricsCollector**: A central coordinator that:
    - Manages individual collectors
