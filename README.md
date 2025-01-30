@@ -62,8 +62,6 @@ The system includes a modern, pre-configured Grafana dashboard featuring:
   - CPU Usage Gauge (warning at 70%, critical at 85%)
   - Memory Usage Gauge (warning at 80%, critical at 90%)
   - Historical performance trends
-  - Time-series graphs with zoom capabilities
-  - Color-coded performance indicators
   - Detailed tooltips and legends
 
 ![Production Health Guardian Dashboard](docs/images/dashboard-preview.png)
