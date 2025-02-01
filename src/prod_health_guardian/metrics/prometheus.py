@@ -17,7 +17,7 @@ class CollectorSingleton:
     @classmethod
     def get_instance(cls) -> MetricsCollector:
         """Get or create the singleton metrics collector instance.
-        
+
         Returns:
             MetricsCollector: The singleton metrics collector instance.
         """
@@ -28,7 +28,7 @@ class CollectorSingleton:
 
 def get_collector() -> MetricsCollector:
     """Get or create the metrics collector.
-    
+
     Returns:
         MetricsCollector: The metrics collector instance.
     """
@@ -37,14 +37,14 @@ def get_collector() -> MetricsCollector:
 
 async def get_latest_metrics() -> bytes:
     """Get the latest metrics in Prometheus format.
-    
+
     This function coordinates the collection and formatting of metrics
     into Prometheus format.
-    
+
     Returns:
         bytes: Prometheus formatted metrics.
     """
     collector = get_collector()
     metrics = await collector.collect_metrics()
     collector.update_prometheus_metrics(metrics)
-    return collector.get_prometheus_metrics() 
+    return collector.get_prometheus_metrics()

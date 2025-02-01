@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from prod_health_guardian.collectors.base import MetricCollector
+from prod_health_guardian.collectors.base import BaseCollector
 from prod_health_guardian.collectors.cpu import CPUCollector
 from prod_health_guardian.collectors.gpu import GPUCollector
 from prod_health_guardian.collectors.memory import MemoryCollector
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     pass  # No type-only imports needed
 
 
-class TestCollector(MetricCollector):
-    """Test implementation of MetricCollector."""
+class TestCollector(BaseCollector):
+    """Test implementation of BaseCollector."""
 
     def get_name(self) -> str:
         """Get collector name.
@@ -44,12 +44,12 @@ def test_base_collector() -> None:
 @pytest.mark.asyncio
 async def test_cpu_collector_basic() -> None:
     """Basic integration test for CPU collector.
-    
+
     Note: Detailed CPU tests are in tests/collectors/test_cpu.py
     """
     collector = CPUCollector()
     metrics = await collector.collect()
-    
+
     # Check basic structure only
     assert isinstance(metrics, dict)
     assert "count" in metrics
@@ -62,12 +62,12 @@ async def test_cpu_collector_basic() -> None:
 @pytest.mark.asyncio
 async def test_memory_collector_basic() -> None:
     """Basic integration test for Memory collector.
-    
+
     Note: Detailed Memory tests are in tests/collectors/test_memory.py
     """
     collector = MemoryCollector()
     metrics = await collector.collect()
-    
+
     # Check basic structure only
     assert isinstance(metrics, dict)
     assert "virtual" in metrics
@@ -77,15 +77,15 @@ async def test_memory_collector_basic() -> None:
 @pytest.mark.collectors
 def test_gpu_collector_basic() -> None:
     """Basic integration test for GPU collector.
-    
+
     Note: Detailed GPU tests are in tests/collectors/test_gpu.py
     """
     collector = GPUCollector()
     metrics = collector.collect_metrics()
-    
+
     # Check basic structure only
     assert isinstance(metrics, dict)
     assert "device_count" in metrics
     assert "devices" in metrics
     assert isinstance(metrics["device_count"], int)
-    assert isinstance(metrics["devices"], list) 
+    assert isinstance(metrics["devices"], list)

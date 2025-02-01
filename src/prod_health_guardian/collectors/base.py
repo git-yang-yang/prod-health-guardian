@@ -1,29 +1,28 @@
-"""Base class for metric collectors."""
+"""Base collector module."""
 
 from abc import ABC, abstractmethod
 from typing import Any
 
 
-class MetricCollector(ABC):
-    """Base class for all metric collectors."""
+class BaseCollector(ABC):
+    """Base class for all metric collectors.
 
-    @abstractmethod
-    def get_name(self) -> str:
-        """Get collector name.
-
-        Returns:
-            str: Name of the collector.
-        """
-        pass
+    This abstract base class defines the interface that all metric collectors
+    must implement. It ensures a consistent pattern for collecting metrics
+    across different hardware components.
+    """
 
     @abstractmethod
     async def collect(self) -> dict[str, Any]:
-        """Collect metrics.
+        """Collect metrics from the hardware component.
+
+        This method must be implemented by all collectors to gather metrics
+        from their respective hardware components.
 
         Returns:
-            dict[str, Any]: Collected metrics data.
+            dict[str, Any]: Collected metrics in a dictionary format.
         """
-        pass
+        raise NotImplementedError
 
     @property
     def is_available(self) -> bool:
@@ -32,4 +31,4 @@ class MetricCollector(ABC):
         Returns:
             bool: True if collector can collect metrics, False otherwise.
         """
-        return True 
+        return True

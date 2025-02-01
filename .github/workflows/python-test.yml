@@ -2,33 +2,54 @@ name: Python Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - '**'  # Run on all branches
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - '**'  # Run on all PRs
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    # Add concurrency to prevent redundant runs
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.python-version }}-${{ github.ref }}
+      cancel-in-progress: true
+      
     strategy:
       matrix:
         python-version: ["3.9", "3.10"]
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'  # Enable pip caching
         
     - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-test-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ matrix.python-version }}-test-
+    
     - name: Install dependencies
-      run: |
-        poetry install
-        poetry sync
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --with dev
         
     - name: Run tests with coverage
       run: |

@@ -1,16 +1,25 @@
-"""CPU metrics collector."""
-
-from typing import Any
+"""CPU metrics collector module."""
 
 import psutil
 
-from prod_health_guardian.collectors.base import MetricCollector
+from .base import BaseCollector
 
 
-class CPUCollector(MetricCollector):
-    """Collector for CPU metrics."""
+class CPUCollector(BaseCollector):
+    """CPU metrics collector.
 
-    def __init__(self, interval: float = 1.0) -> None:
+    This collector gathers various CPU metrics including:
+    - Core counts (physical and logical)
+    - CPU frequencies (current, min, max)
+    - CPU usage percentages (total and per-core)
+    - CPU statistics (context switches, interrupts, etc.)
+
+    Args:
+        interval: Time interval in seconds for CPU percentage calculation.
+            Defaults to 0.1 seconds.
+    """
+
+    def __init__(self, interval: float = 0.1) -> None:
         """Initialize CPU collector.
 
         Args:
@@ -26,46 +35,45 @@ class CPUCollector(MetricCollector):
         """
         return "cpu"
 
-    async def collect(self) -> dict[str, Any]:
+    async def collect(self) -> dict:
         """Collect CPU metrics.
 
         Returns:
-            dict[str, Any]: CPU metrics including usage percentages and count.
+            dict: CPU metrics including core counts, frequencies,
+                usage percentages, and statistics.
         """
-        # Get CPU count
-        cpu_count = psutil.cpu_count()
-        cpu_count_logical = psutil.cpu_count(logical=True)
-
-        # Get CPU frequency
-        freq = psutil.cpu_freq()
-        freq_data = {
-            "current": float(freq.current) if freq else None,
-            "min": float(freq.min) if freq and freq.min else None,
-            "max": float(freq.max) if freq and freq.max else None
+        # Get CPU counts
+        cpu_count = {
+            "physical": psutil.cpu_count(logical=False),
+            "logical": psutil.cpu_count(logical=True),
         }
 
-        # Get CPU usage (requires sleep)
-        cpu_percent = psutil.cpu_percent(interval=self.interval)
-        per_cpu = psutil.cpu_percent(interval=0, percpu=True)
+        # Get CPU frequencies
+        cpu_freq = psutil.cpu_freq()
+        frequencies = {
+            "current": float(cpu_freq.current) if cpu_freq else None,
+            "min": float(cpu_freq.min) if cpu_freq else None,
+            "max": float(cpu_freq.max) if cpu_freq else None,
+        }
 
-        # Get CPU stats
-        stats = psutil.cpu_stats()
-        stats_data = {
-            "ctx_switches": stats.ctx_switches,
-            "interrupts": stats.interrupts,
-            "soft_interrupts": stats.soft_interrupts,
-            "syscalls": stats.syscalls
+        # Get CPU usage percentages
+        cpu_percent = {
+            "total": psutil.cpu_percent(interval=self.interval),
+            "per_cpu": psutil.cpu_percent(interval=self.interval, percpu=True),
+        }
+
+        # Get CPU statistics
+        cpu_stats = psutil.cpu_stats()
+        stats = {
+            "ctx_switches": cpu_stats.ctx_switches,
+            "interrupts": cpu_stats.interrupts,
+            "soft_interrupts": cpu_stats.soft_interrupts,
+            "syscalls": cpu_stats.syscalls,
         }
 
         return {
-            "count": {
-                "physical": cpu_count,
-                "logical": cpu_count_logical
-            },
-            "frequency": freq_data,
-            "percent": {
-                "total": cpu_percent,
-                "per_cpu": per_cpu
-            },
-            "stats": stats_data
-        } 
+            "count": cpu_count,
+            "frequency": frequencies,
+            "percent": cpu_percent,
+            "stats": stats,
+        }

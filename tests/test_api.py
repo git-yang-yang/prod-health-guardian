@@ -39,7 +39,7 @@ def test_health_check(client: TestClient) -> None:
     """
     response = client.get("/health")
     assert response.status_code == HTTP_200_OK
-    
+
     data = response.json()
     assert data["status"] == "healthy"
     assert data["version"] == __version__
@@ -61,7 +61,7 @@ def test_get_metrics(client: TestClient) -> None:
     # Verify that the response can be parsed as Prometheus metrics
     metrics = list(text_string_to_metric_families(response.text))
     assert len(metrics) > 0
-    
+
     # Check for presence of key metrics
     metric_names = {m.name for m in metrics}
     assert "cpu_physical_count" in metric_names
@@ -81,13 +81,13 @@ def test_get_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
     # Mock CPU collector to raise an exception
     mocker.patch(
         "prod_health_guardian.collectors.cpu.CPUCollector.collect",
-        side_effect=Exception("Test error")
+        side_effect=Exception("Test error"),
     )
-    
+
     response = client.get("/metrics")
     assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert response.headers["content-type"] == "application/json"
-    
+
     data = response.json()
     assert "detail" in data
     assert data["detail"] == "Failed to generate Prometheus metrics"
@@ -106,14 +106,14 @@ def test_get_json_metrics(client: TestClient) -> None:
     data = response.json()
     assert "cpu" in data
     assert "memory" in data
-    
+
     # Check CPU metrics structure
     cpu = data["cpu"]
     assert "count" in cpu
     assert "frequency" in cpu
     assert "percent" in cpu
     assert "stats" in cpu
-    
+
     # Check memory metrics structure
     memory = data["memory"]
     assert "virtual" in memory
@@ -130,13 +130,13 @@ def test_get_json_metrics_error(client: TestClient, mocker: "MockerFixture") -> 
     # Mock memory collector to raise an exception
     mocker.patch(
         "prod_health_guardian.collectors.memory.MemoryCollector.collect",
-        side_effect=Exception("Test error")
+        side_effect=Exception("Test error"),
     )
-    
+
     response = client.get("/metrics/json")
     assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert response.headers["content-type"] == "application/json"
-    
+
     data = response.json()
     assert "detail" in data
     assert "Failed to collect metrics" in data["detail"]
@@ -192,13 +192,13 @@ def test_get_collector_metrics_error(
     # Mock CPU collector to raise an exception
     mocker.patch(
         "prod_health_guardian.collectors.cpu.CPUCollector.collect",
-        side_effect=Exception("Test error")
+        side_effect=Exception("Test error"),
     )
-    
+
     response = client.get("/metrics/json/cpu")
     assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert response.headers["content-type"] == "application/json"
-    
+
     data = response.json()
     assert "detail" in data
     assert data["detail"] == "Failed to collect metrics from cpu"
