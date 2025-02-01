@@ -1,4 +1,5 @@
 """Basic tests to verify test infrastructure."""
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -9,7 +10,7 @@ MOCK_RETURN_VALUE = 42
 
 def test_basic_setup() -> None:
     """Basic test to verify pytest setup is working.
-    
+
     This test will always pass and is used to confirm the test infrastructure
     is properly configured.
     """
@@ -18,7 +19,7 @@ def test_basic_setup() -> None:
 
 def test_mock_example(mocker: "MockerFixture") -> None:
     """Example test demonstrating mock usage.
-    
+
     Args:
         mocker: Pytest fixture for mocking.
     """

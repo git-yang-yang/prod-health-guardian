@@ -42,7 +42,7 @@ metrics_collector = get_collector()
     response_class=RedirectResponse,
     responses={
         302: {"description": "Redirect to API documentation"},
-    }
+    },
 )
 async def root() -> RedirectResponse:
     """Root endpoint that redirects to API documentation.
@@ -59,7 +59,7 @@ async def root() -> RedirectResponse:
     response_model=HealthStatus,
     responses={
         200: {"model": HealthStatus},
-    }
+    },
 )
 async def health_check() -> HealthStatus:
     """Health check endpoint.
@@ -71,19 +71,19 @@ async def health_check() -> HealthStatus:
         # Try to collect metrics from all collectors
         await cpu_collector.collect()
         await memory_collector.collect()
-        
+
         return HealthStatus(
             status="healthy",
             version=__version__,
             system={
                 "api": "running",
-                "collectors": "ready"
-            }
+                "collectors": "ready",
+            },
         )
     except Exception as e:
         return HealthStatus(
             status="unhealthy",
-            error=f"{e!s}"
+            error=f"{e!s}",
         )
 
 
@@ -94,20 +94,20 @@ async def health_check() -> HealthStatus:
     responses={
         200: {
             "content": {"text/plain": {}},
-            "description": "Prometheus formatted metrics"
+            "description": "Prometheus formatted metrics",
         },
         500: {"model": ErrorResponse},
-    }
+    },
 )
 async def get_metrics() -> Response:
     """Get system metrics in Prometheus format.
-    
+
     This endpoint returns all system metrics in Prometheus text format,
     suitable for scraping by Prometheus.
-    
+
     Returns:
         Response: Prometheus formatted metrics
-        
+
     Raises:
         HTTPException: If metrics collection fails
     """
@@ -116,12 +116,12 @@ async def get_metrics() -> Response:
         metrics = await get_latest_metrics()
         return Response(
             content=metrics,
-            media_type="text/plain"
+            media_type="text/plain",
         )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate Prometheus metrics"
+            detail="Failed to generate Prometheus metrics",
         ) from e
 
 
@@ -132,17 +132,17 @@ async def get_metrics() -> Response:
     responses={
         200: {"model": SystemMetrics},
         500: {"model": ErrorResponse},
-    }
+    },
 )
 async def get_json_metrics() -> SystemMetrics:
     """Get system metrics in JSON format.
-    
+
     This endpoint returns all system metrics in a structured JSON format,
     validated through Pydantic models.
-    
+
     Returns:
         SystemMetrics: Combined system metrics
-        
+
     Raises:
         HTTPException: If metrics collection fails
     """
@@ -151,7 +151,7 @@ async def get_json_metrics() -> SystemMetrics:
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to collect metrics: {e!s}"
+            detail=f"Failed to collect metrics: {e!s}",
         ) from e
 
 
@@ -162,25 +162,25 @@ async def get_json_metrics() -> SystemMetrics:
     responses={
         200: {
             "model": dict[str, Union[CPUMetrics, MemoryMetrics]],
-            "description": "Metrics from the specified collector"
+            "description": "Metrics from the specified collector",
         },
         404: {"model": ErrorResponse},
         500: {"model": ErrorResponse},
-    }
+    },
 )
 async def get_collector_metrics(
-    collector: str
+    collector: str,
 ) -> dict[str, Union[CPUMetrics, MemoryMetrics]]:
     """Get metrics from a specific collector.
-    
+
     This endpoint returns metrics from a single collector in JSON format.
-    
+
     Args:
         collector: Name of the collector (cpu or memory)
-        
+
     Returns:
         dict: Collector metrics
-        
+
     Raises:
         HTTPException: If collector doesn't exist or metrics collection fails
     """
@@ -194,12 +194,12 @@ async def get_collector_metrics(
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"Collector '{collector}' not found"
+                detail=f"Collector '{collector}' not found",
             )
     except HTTPException as e:
         raise e from None
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to collect metrics from {collector}"
+            detail=f"Failed to collect metrics from {collector}",
         ) from e

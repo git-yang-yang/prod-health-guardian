@@ -30,19 +30,10 @@ async def test_get_latest_metrics(mocker: "MockerFixture") -> None:
     mock_metrics = mocker.Mock()
     mock_prometheus_data = b"mock prometheus data"
 
+    mocker.patch.object(collector, "collect_metrics", return_value=mock_metrics)
+    mocker.patch.object(collector, "update_prometheus_metrics")
     mocker.patch.object(
-        collector,
-        "collect_metrics",
-        return_value=mock_metrics
-    )
-    mocker.patch.object(
-        collector,
-        "update_prometheus_metrics"
-    )
-    mocker.patch.object(
-        collector,
-        "get_prometheus_metrics",
-        return_value=mock_prometheus_data
+        collector, "get_prometheus_metrics", return_value=mock_prometheus_data
     )
 
     # Get metrics
@@ -52,4 +43,4 @@ async def test_get_latest_metrics(mocker: "MockerFixture") -> None:
     collector.collect_metrics.assert_called_once()
     collector.update_prometheus_metrics.assert_called_once_with(mock_metrics)
     collector.get_prometheus_metrics.assert_called_once()
-    assert metrics == mock_prometheus_data 
+    assert metrics == mock_prometheus_data

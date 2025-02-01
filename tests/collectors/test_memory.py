@@ -28,7 +28,7 @@ async def test_memory_collector_metrics() -> None:
     """Test memory metrics collection."""
     collector = MemoryCollector()
     metrics = await collector.collect()
-    
+
     # Check structure
     assert "virtual" in metrics
     assert "swap" in metrics
@@ -46,4 +46,4 @@ async def test_memory_collector_metrics() -> None:
     assert all(key in swap for key in ["total", "used", "free", "percent"])
     assert isinstance(swap["total"], int)
     assert isinstance(swap["percent"], float)
-    assert MIN_PERCENT <= swap["percent"] <= MAX_PERCENT 
+    assert MIN_PERCENT <= swap["percent"] <= MAX_PERCENT

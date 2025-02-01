@@ -28,7 +28,7 @@ async def test_cpu_collector_metrics() -> None:
     """Test CPU metrics collection."""
     collector = CPUCollector(interval=0.1)  # Short interval for testing
     metrics = await collector.collect()
-    
+
     # Check structure
     assert "count" in metrics
     assert "frequency" in metrics
@@ -62,4 +62,4 @@ async def test_cpu_collector_metrics() -> None:
     assert isinstance(stats["ctx_switches"], int)
     assert isinstance(stats["interrupts"], int)
     assert isinstance(stats["soft_interrupts"], int)
-    assert isinstance(stats["syscalls"], int) 
+    assert isinstance(stats["syscalls"], int)

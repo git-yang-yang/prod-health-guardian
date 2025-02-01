@@ -24,13 +24,15 @@ if [ ! -f "pyproject.toml" ]; then
 fi
 
 echo -e "${GREEN}1. Installing dependencies...${NC}"
-poetry install
-poetry sync
+poetry install --no-interaction --with dev
 
 echo -e "\n${GREEN}2. Running linting with ruff...${NC}"
-poetry run ruff check .
+echo -e "\n${GREEN}2a. Fixing code style...${NC}"
+poetry run ruff check . --fix
+echo -e "\n${GREEN}2b. Fixing formatting...${NC}"
+poetry run ruff format .
 
 echo -e "\n${GREEN}3. Running tests with coverage...${NC}"
-poetry run pytest --cov --cov-report=term-missing
+poetry run pytest --cov=prod_health_guardian --cov-report=term-missing
 
 echo -e "\n${GREEN}All checks passed!${NC}" 
