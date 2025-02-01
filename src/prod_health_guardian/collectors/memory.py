@@ -1,6 +1,7 @@
 """Memory metrics collector module."""
 
 import logging
+from typing import Union
 
 import psutil
 
@@ -17,6 +18,14 @@ class MemoryCollector(BaseCollector):
     - Swap memory (total, used, free, percentage, swap in/out)
     """
 
+    def __init__(self, interval: float = 1.0) -> None:
+        """Initialize memory collector.
+
+        Args:
+            interval: Time interval in seconds for metric collection.
+        """
+        self.interval = interval
+
     def get_name(self) -> str:
         """Get collector name.
 
@@ -25,16 +34,17 @@ class MemoryCollector(BaseCollector):
         """
         return "memory"
 
-    async def collect(self) -> dict:
+    async def collect(self) -> dict[str, Union[int, float]]:
         """Collect memory metrics.
 
         Returns:
-            dict: Memory metrics including virtual and swap memory information.
-                If swap memory is not available, returns zeros for swap metrics.
+            dict[str, Union[int, float]]: Memory metrics for virtual and swap memory.
+                Includes usage, capacity and performance statistics.
+                Falls back to zeros if swap memory is unavailable.
         """
         # Get virtual memory metrics
         virtual = psutil.virtual_memory()
-        virtual_metrics = {
+        metrics = {
             "total": virtual.total,
             "available": virtual.available,
             "used": virtual.used,
@@ -45,26 +55,27 @@ class MemoryCollector(BaseCollector):
         # Get swap memory metrics with fallback to zeros if not available
         try:
             swap = psutil.swap_memory()
-            swap_metrics = {
-                "total": swap.total,
-                "used": swap.used,
-                "free": swap.free,
-                "percent": swap.percent,
-                "sin": swap.sin,
-                "sout": swap.sout,
-            }
+            metrics.update(
+                {
+                    "swap_total": swap.total,
+                    "swap_used": swap.used,
+                    "swap_free": swap.free,
+                    "swap_percent": swap.percent,
+                    "swap_in": swap.sin,
+                    "swap_out": swap.sout,
+                }
+            )
         except Exception as e:
             logger.warning("Failed to collect swap memory metrics: %s", e)
-            swap_metrics = {
-                "total": 0,
-                "used": 0,
-                "free": 0,
-                "percent": 0.0,
-                "sin": 0,
-                "sout": 0,
-            }
+            metrics.update(
+                {
+                    "swap_total": 0,
+                    "swap_used": 0,
+                    "swap_free": 0,
+                    "swap_percent": 0.0,
+                    "swap_in": 0,
+                    "swap_out": 0,
+                }
+            )
 
-        return {
-            "virtual": virtual_metrics,
-            "swap": swap_metrics,
-        }
+        return metrics

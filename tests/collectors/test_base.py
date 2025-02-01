@@ -9,17 +9,21 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from prod_health_guardian.collectors.base import BaseCollector
-from prod_health_guardian.collectors.cpu import CPUCollector
-from prod_health_guardian.collectors.gpu import GPUCollector
-from prod_health_guardian.collectors.memory import MemoryCollector
+from prod_health_guardian.collectors import (
+    BaseCollector,
+    CPUCollector,
+    GPUCollector,
+    MemoryCollector,
+)
 
 if TYPE_CHECKING:
-    pass  # No type-only imports needed
+    pass
 
 
 class TestCollector(BaseCollector):
-    """Test implementation of BaseCollector."""
+    """Test collector implementation."""
+
+    interval: float = 1.0
 
     def get_name(self) -> str:
         """Get collector name.
@@ -35,14 +39,18 @@ class TestCollector(BaseCollector):
         Returns:
             dict[str, int]: Test metrics.
         """
-        return {"value": 42}
+        return {"test_value": 42}
 
 
-def test_base_collector() -> None:
+@pytest.mark.asyncio
+async def test_base_collector() -> None:
     """Test base collector functionality."""
     collector = TestCollector()
     assert collector.get_name() == "test"
     assert collector.is_available is True
+
+    metrics = await collector.collect()
+    assert metrics == {"test_value": 42}
 
 
 @pytest.mark.collectors
@@ -61,25 +69,9 @@ async def test_collector_integration() -> None:
     ]
 
     for collector in collectors:
-        if isinstance(collector, GPUCollector):
-            metrics = collector.collect_metrics()
-        else:
-            metrics = await collector.collect()
-
-        # Basic validation that metrics are returned
+        metrics = await collector.collect()
         assert isinstance(metrics, dict)
-        assert len(metrics) > 0
-
-        # Validate that all values in the metrics dict are of expected types
-        def validate_dict_types(d: dict) -> None:
-            for v in d.values():
-                if isinstance(v, dict):
-                    validate_dict_types(v)
-                elif isinstance(v, list):
-                    assert all(
-                        isinstance(x, (int, float, str, bool, type(None))) for x in v
-                    )
-                else:
-                    assert isinstance(v, (int, float, str, bool, type(None)))
-
-        validate_dict_types(metrics)
+        assert all(isinstance(key, str) for key in metrics.keys())
+        assert all(
+            isinstance(value, (int, float, str, list)) for value in metrics.values()
+        )

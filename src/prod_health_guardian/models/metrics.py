@@ -1,183 +1,175 @@
 """Models for system metrics data."""
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, Field
 
 
 class CPUMetrics(BaseModel):
     """CPU metrics model."""
 
-    count: dict[str, int] = Field(
+    physical_cores: int = Field(
         ...,
-        description="CPU core counts",
-        json_schema_extra={
-            "example": {"physical": 4, "logical": 8},
-        },
+        description="Number of physical CPU cores",
+        json_schema_extra={"example": 4},
     )
-    frequency: dict[str, Optional[float]] = Field(
+    logical_cores: int = Field(
         ...,
-        description="CPU frequencies in MHz",
-        json_schema_extra={
-            "example": {
-                "current": 2400.0,
-                "min": 2200.0,
-                "max": 3200.0,
-            },
-        },
+        description="Number of logical CPU cores",
+        json_schema_extra={"example": 8},
     )
-    percent: dict[str, Union[float, list[float]]] = Field(
+    cpu_freq_current: float = Field(
         ...,
-        description="CPU usage percentages",
-        json_schema_extra={
-            "example": {
-                "total": 25.5,
-                "per_cpu": [20.0, 30.0, 25.0, 27.0],
-            },
-        },
+        description="Current CPU frequency in MHz",
+        json_schema_extra={"example": 2400.0},
     )
-    stats: dict[str, int] = Field(
+    cpu_freq_min: float = Field(
         ...,
-        description="CPU statistics",
-        json_schema_extra={
-            "example": {
-                "ctx_switches": 1000,
-                "interrupts": 500,
-                "soft_interrupts": 200,
-                "syscalls": 5000,
-            },
-        },
+        description="Minimum CPU frequency in MHz",
+        json_schema_extra={"example": 2200.0},
+    )
+    cpu_freq_max: float = Field(
+        ...,
+        description="Maximum CPU frequency in MHz",
+        json_schema_extra={"example": 3200.0},
+    )
+    cpu_percent: float = Field(
+        ...,
+        description="Total CPU usage percentage",
+        json_schema_extra={"example": 25.5},
+    )
+    per_cpu_percent: list[float] = Field(
+        ...,
+        description="CPU usage percentage per core",
+        json_schema_extra={"example": [20.0, 30.0, 25.0, 27.0]},
+    )
+    ctx_switches: int = Field(
+        ...,
+        description="Total number of context switches",
+        json_schema_extra={"example": 1000},
+    )
+    interrupts: int = Field(
+        ...,
+        description="Total number of interrupts",
+        json_schema_extra={"example": 500},
+    )
+    soft_interrupts: int = Field(
+        ...,
+        description="Total number of soft interrupts",
+        json_schema_extra={"example": 200},
+    )
+    syscalls: int = Field(
+        ...,
+        description="Total number of system calls",
+        json_schema_extra={"example": 5000},
     )
 
 
 class MemoryMetrics(BaseModel):
     """Memory metrics model."""
 
-    virtual: dict[str, Union[int, float]] = Field(
+    total: int = Field(
         ...,
-        description="Virtual memory metrics",
-        json_schema_extra={
-            "example": {
-                "total": 16_000_000_000,
-                "available": 8_000_000_000,
-                "used": 7_000_000_000,
-                "free": 1_000_000_000,
-                "percent": 43.75,
-            },
-        },
+        description="Total virtual memory in bytes",
+        json_schema_extra={"example": 16_000_000_000},
     )
-    swap: dict[str, Union[int, float]] = Field(
+    available: int = Field(
         ...,
-        description="Swap memory metrics",
-        json_schema_extra={
-            "example": {
-                "total": 8_000_000_000,
-                "used": 1_000_000_000,
-                "free": 7_000_000_000,
-                "percent": 12.5,
-                "sin": 100,
-                "sout": 50,
-            },
-        },
+        description="Available virtual memory in bytes",
+        json_schema_extra={"example": 8_000_000_000},
     )
-
-
-class GPUDeviceMetrics(BaseModel):
-    """GPU device metrics model."""
-
-    name: str = Field(
+    used: int = Field(
         ...,
-        description="GPU device name",
-        json_schema_extra={
-            "example": "NVIDIA GeForce RTX 3080",
-        },
+        description="Used virtual memory in bytes",
+        json_schema_extra={"example": 7_000_000_000},
     )
-    temperature: float = Field(
+    free: int = Field(
         ...,
-        description="GPU temperature in Celsius",
-        json_schema_extra={
-            "example": 65.0,
-        },
+        description="Free virtual memory in bytes",
+        json_schema_extra={"example": 1_000_000_000},
     )
-    power_usage: float = Field(
+    percent: float = Field(
         ...,
-        description="GPU power usage in Watts",
-        json_schema_extra={
-            "example": 220.5,
-        },
+        description="Virtual memory usage percentage",
+        json_schema_extra={"example": 43.75},
     )
-    memory_total: int = Field(
+    swap_total: int = Field(
         ...,
-        description="Total GPU memory in bytes",
-        json_schema_extra={
-            "example": 10_737_418_240,  # 10GB
-        },
+        description="Total swap memory in bytes",
+        json_schema_extra={"example": 8_000_000_000},
     )
-    memory_used: int = Field(
+    swap_used: int = Field(
         ...,
-        description="Used GPU memory in bytes",
-        json_schema_extra={
-            "example": 4_294_967_296,  # 4GB
-        },
+        description="Used swap memory in bytes",
+        json_schema_extra={"example": 1_000_000_000},
     )
-    memory_free: int = Field(
+    swap_free: int = Field(
         ...,
-        description="Free GPU memory in bytes",
-        json_schema_extra={
-            "example": 6_442_450_944,  # 6GB
-        },
+        description="Free swap memory in bytes",
+        json_schema_extra={"example": 7_000_000_000},
     )
-    utilization: float = Field(
+    swap_percent: float = Field(
         ...,
-        description="GPU utilization percentage",
-        json_schema_extra={
-            "example": 85.5,
-        },
+        description="Swap memory usage percentage",
+        json_schema_extra={"example": 12.5},
     )
-    memory_utilization: float = Field(
+    swap_in: int = Field(
         ...,
-        description="GPU memory utilization percentage",
-        json_schema_extra={
-            "example": 40.0,
-        },
+        description="Number of memory pages swapped in",
+        json_schema_extra={"example": 100},
     )
-    fan_speed: float = Field(
+    swap_out: int = Field(
         ...,
-        description="GPU fan speed percentage",
-        json_schema_extra={
-            "example": 75.0,
-        },
+        description="Number of memory pages swapped out",
+        json_schema_extra={"example": 50},
     )
 
 
 class GPUMetrics(BaseModel):
     """GPU metrics model."""
 
-    device_count: int = Field(
+    name: str = Field(
         ...,
-        description="Number of GPU devices",
-        json_schema_extra={
-            "example": 2,
-        },
+        description="GPU device name",
+        json_schema_extra={"example": "NVIDIA GeForce RTX 3080"},
     )
-    devices: list[GPUDeviceMetrics] = Field(
+    temperature: float = Field(
         ...,
-        description="List of GPU device metrics",
-        json_schema_extra={
-            "example": [
-                {
-                    "name": "NVIDIA GeForce RTX 3080",
-                    "temperature": 65.0,
-                    "power_usage": 220.5,
-                    "memory_total": 10_737_418_240,
-                    "memory_used": 4_294_967_296,
-                    "memory_free": 6_442_450_944,
-                    "utilization": 85.5,
-                    "memory_utilization": 40.0,
-                    "fan_speed": 75.0,
-                }
-            ],
-        },
+        description="GPU temperature in Celsius",
+        json_schema_extra={"example": 65.0},
+    )
+    power_watts: float = Field(
+        ...,
+        description="GPU power usage in Watts",
+        json_schema_extra={"example": 220.5},
+    )
+    memory_total: int = Field(
+        ...,
+        description="Total GPU memory in bytes",
+        json_schema_extra={"example": 10_737_418_240},  # 10GB
+    )
+    memory_used: int = Field(
+        ...,
+        description="Used GPU memory in bytes",
+        json_schema_extra={"example": 4_294_967_296},  # 4GB
+    )
+    memory_free: int = Field(
+        ...,
+        description="Free GPU memory in bytes",
+        json_schema_extra={"example": 6_442_450_944},  # 6GB
+    )
+    gpu_utilization: float = Field(
+        ...,
+        description="GPU utilization percentage",
+        json_schema_extra={"example": 85.5},
+    )
+    memory_utilization: float = Field(
+        ...,
+        description="GPU memory utilization percentage",
+        json_schema_extra={"example": 40.0},
+    )
+    fan_speed: float = Field(
+        ...,
+        description="GPU fan speed percentage",
+        json_schema_extra={"example": 75.0},
     )
 
 

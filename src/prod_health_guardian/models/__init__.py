@@ -7,6 +7,7 @@ from prod_health_guardian.models.api import (
 )
 from prod_health_guardian.models.metrics import (
     CPUMetrics,
+    GPUMetrics,
     MemoryMetrics,
     SystemMetrics,
 )
@@ -14,6 +15,7 @@ from prod_health_guardian.models.metrics import (
 __all__ = [
     "CPUMetrics",
     "ErrorResponse",
+    "GPUMetrics",
     "HealthStatus",
     "MemoryMetrics",
     "MetricsResponse",

@@ -191,7 +191,7 @@ class MetricsCollector:
         # Collect raw metrics
         cpu_data = await self.cpu_collector.collect()
         memory_data = await self.memory_collector.collect()
-        gpu_data = self.gpu_collector.collect_metrics()  # Note: This is not async
+        gpu_data = await self.gpu_collector.collect()  # Now using async collect
 
         # Validate through models
         return SystemMetrics(
@@ -210,61 +210,77 @@ class MetricsCollector:
             metrics: Validated system metrics.
         """
         # Update CPU metrics
-        self.cpu_physical_count.set(metrics.cpu.count["physical"])
-        self.cpu_logical_count.set(metrics.cpu.count["logical"])
+        self.cpu_physical_count.set(metrics.cpu.physical_cores)
+        self.cpu_logical_count.set(metrics.cpu.logical_cores)
+        self.cpu_frequency_current.set(metrics.cpu.cpu_freq_current)
+        self.cpu_frequency_min.set(metrics.cpu.cpu_freq_min)
+        self.cpu_frequency_max.set(metrics.cpu.cpu_freq_max)
+        self.cpu_percent_total.set(metrics.cpu.cpu_percent)
 
-        # Update frequencies if available
-        if metrics.cpu.frequency["current"] is not None:
-            self.cpu_frequency_current.set(metrics.cpu.frequency["current"])
-        if metrics.cpu.frequency["min"] is not None:
-            self.cpu_frequency_min.set(metrics.cpu.frequency["min"])
-        if metrics.cpu.frequency["max"] is not None:
-            self.cpu_frequency_max.set(metrics.cpu.frequency["max"])
-
-        # Update CPU usage
-        self.cpu_percent_total.set(metrics.cpu.percent["total"])
-        for i, percent in enumerate(metrics.cpu.percent["per_cpu"]):
+        for i, percent in enumerate(metrics.cpu.per_cpu_percent):
             self.cpu_percent_per_cpu.labels(core=str(i)).set(percent)
 
-        # Update CPU stats
-        self.cpu_ctx_switches.set(metrics.cpu.stats["ctx_switches"])
-        self.cpu_interrupts.set(metrics.cpu.stats["interrupts"])
-        self.cpu_soft_interrupts.set(metrics.cpu.stats["soft_interrupts"])
-        self.cpu_syscalls.set(metrics.cpu.stats["syscalls"])
+        self.cpu_ctx_switches.set(metrics.cpu.ctx_switches)
+        self.cpu_interrupts.set(metrics.cpu.interrupts)
+        self.cpu_soft_interrupts.set(metrics.cpu.soft_interrupts)
+        self.cpu_syscalls.set(metrics.cpu.syscalls)
 
         # Update memory metrics
-        self.memory_virtual_total.set(metrics.memory.virtual["total"])
-        self.memory_virtual_available.set(metrics.memory.virtual["available"])
-        self.memory_virtual_used.set(metrics.memory.virtual["used"])
-        self.memory_virtual_free.set(metrics.memory.virtual["free"])
-        self.memory_virtual_percent.set(metrics.memory.virtual["percent"])
+        self.memory_virtual_total.set(metrics.memory.total)
+        self.memory_virtual_available.set(metrics.memory.available)
+        self.memory_virtual_used.set(metrics.memory.used)
+        self.memory_virtual_free.set(metrics.memory.free)
+        self.memory_virtual_percent.set(metrics.memory.percent)
 
         # Update swap metrics
-        self.memory_swap_total.set(metrics.memory.swap["total"])
-        self.memory_swap_used.set(metrics.memory.swap["used"])
-        self.memory_swap_free.set(metrics.memory.swap["free"])
-        self.memory_swap_percent.set(metrics.memory.swap["percent"])
-        self.memory_swap_sin.set(metrics.memory.swap["sin"])
-        self.memory_swap_sout.set(metrics.memory.swap["sout"])
+        self.memory_swap_total.set(metrics.memory.swap_total)
+        self.memory_swap_used.set(metrics.memory.swap_used)
+        self.memory_swap_free.set(metrics.memory.swap_free)
+        self.memory_swap_percent.set(metrics.memory.swap_percent)
+        self.memory_swap_sin.set(metrics.memory.swap_in)
+        self.memory_swap_sout.set(metrics.memory.swap_out)
 
         # Update GPU metrics
-        self.gpu_device_count.set(metrics.gpu.device_count)
-
-        for i, device in enumerate(metrics.gpu.devices):
-            labels = {"gpu_id": str(i), "name": device.name}
-            self.gpu_temperature.labels(**labels).set(device.temperature)
-            self.gpu_power.labels(**labels).set(device.power_usage)
-            self.gpu_memory_total.labels(**labels).set(device.memory_total)
-            self.gpu_memory_used.labels(**labels).set(device.memory_used)
-            self.gpu_memory_free.labels(**labels).set(device.memory_free)
-            self.gpu_utilization.labels(**labels).set(device.utilization)
-            self.gpu_memory_utilization.labels(**labels).set(device.memory_utilization)
-            self.gpu_fan_speed.labels(**labels).set(device.fan_speed)
+        gpu_id = "0"  # We currently only support one GPU
+        self.gpu_temperature.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.temperature
+        )
+        self.gpu_power.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.power_watts
+        )
+        self.gpu_memory_total.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.memory_total
+        )
+        self.gpu_memory_used.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.memory_used
+        )
+        self.gpu_memory_free.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.memory_free
+        )
+        self.gpu_utilization.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.gpu_utilization
+        )
+        self.gpu_memory_utilization.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.memory_utilization
+        )
+        self.gpu_fan_speed.labels(gpu_id=gpu_id, name=metrics.gpu.name).set(
+            metrics.gpu.fan_speed
+        )
 
     def get_prometheus_metrics(self) -> bytes:
-        """Get metrics in Prometheus format.
+        """Get metrics in Prometheus text format.
 
         Returns:
             bytes: Prometheus formatted metrics.
         """
         return generate_latest()
+
+    async def get_latest_metrics(self) -> str:
+        """Get the latest metrics in Prometheus format.
+
+        Returns:
+            str: Prometheus formatted metrics.
+        """
+        metrics = await self.collect_metrics()
+        self.update_prometheus_metrics(metrics)
+        return generate_latest().decode("utf-8")
