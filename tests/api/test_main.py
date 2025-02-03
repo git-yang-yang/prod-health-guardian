@@ -90,7 +90,7 @@ def test_get_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
 
     data = response.json()
     assert "detail" in data
-    assert data["detail"] == "Failed to generate Prometheus metrics"
+    assert data["detail"] == "Failed to generate Prometheus metrics: Test error"
 
 
 def test_get_json_metrics(client: TestClient) -> None:
@@ -109,15 +109,13 @@ def test_get_json_metrics(client: TestClient) -> None:
 
     # Check CPU metrics structure
     cpu = data["cpu"]
-    assert "count" in cpu
-    assert "frequency" in cpu
-    assert "percent" in cpu
-    assert "stats" in cpu
-
-    # Check memory metrics structure
-    memory = data["memory"]
-    assert "virtual" in memory
-    assert "swap" in memory
+    assert "physical_cores" in cpu
+    assert "logical_cores" in cpu
+    assert "cpu_freq_current" in cpu
+    assert "cpu_freq_min" in cpu
+    assert "cpu_freq_max" in cpu
+    assert "cpu_percent" in cpu
+    assert "per_cpu_percent" in cpu
 
 
 def test_get_json_metrics_error(client: TestClient, mocker: "MockerFixture") -> None:
@@ -156,10 +154,13 @@ def test_get_cpu_metrics(client: TestClient) -> None:
     data = response.json()
     assert "cpu" in data
     cpu = data["cpu"]
-    assert "count" in cpu
-    assert "frequency" in cpu
-    assert "percent" in cpu
-    assert "stats" in cpu
+    assert "physical_cores" in cpu
+    assert "logical_cores" in cpu
+    assert "cpu_freq_current" in cpu
+    assert "cpu_freq_min" in cpu
+    assert "cpu_freq_max" in cpu
+    assert "cpu_percent" in cpu
+    assert "per_cpu_percent" in cpu
 
 
 def test_get_memory_metrics(client: TestClient) -> None:
@@ -175,8 +176,15 @@ def test_get_memory_metrics(client: TestClient) -> None:
     data = response.json()
     assert "memory" in data
     memory = data["memory"]
-    assert "virtual" in memory
-    assert "swap" in memory
+    assert "total" in memory
+    assert "available" in memory
+    assert "used" in memory
+    assert "free" in memory
+    assert "percent" in memory
+    assert "swap_total" in memory
+    assert "swap_used" in memory
+    assert "swap_free" in memory
+    assert "swap_percent" in memory
 
 
 def test_get_collector_metrics_error(

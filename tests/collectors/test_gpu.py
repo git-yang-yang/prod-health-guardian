@@ -1,127 +1,136 @@
-"""Tests for GPU metrics collector."""
+"""Test GPU collector functionality."""
 
 from typing import TYPE_CHECKING
 
+import pynvml
 import pytest
-from pytest_mock import MockerFixture
 
 from prod_health_guardian.collectors.gpu import GPUCollector
 
 if TYPE_CHECKING:
-    pass  # No unused imports
-
+    from pytest_mock.plugin import MockerFixture
 
 # Test constants
-DEVICE_COUNT = 2
-GPU_NAME = "NVIDIA GeForce RTX 3080"
-GPU_TEMPERATURE = 65.0
-GPU_POWER_MILLIWATTS = 220500  # milliwatts
-GPU_POWER_WATTS = 220.5  # watts
-GPU_MEMORY_TOTAL = 10_737_418_240  # 10GB
-GPU_MEMORY_USED = 4_294_967_296  # 4GB
-GPU_MEMORY_FREE = 6_442_450_944  # 6GB
-GPU_UTILIZATION = 85.0
-GPU_MEMORY_UTILIZATION = 40.0
-GPU_FAN_SPEED = 75.0
-
-
-class MockNVMLError(Exception):
-    """Mock NVML Error class."""
+GPU_NAME = "NVIDIA Test GPU"
+GPU_TEMP = 65.0
+GPU_POWER = 250.0  # Watts
+GPU_MEM_TOTAL = 8589934592  # 8GB
+GPU_MEM_USED = 4294967296  # 4GB
+GPU_MEM_FREE = 4294967296  # 4GB
+GPU_UTIL = 75.0
+GPU_MEM_UTIL = 50.0
+GPU_FAN = 80.0
 
 
 @pytest.fixture
-def mock_gpu_metrics() -> dict:
-    """Create mock GPU metrics.
-
-    Returns:
-        dict: Mock GPU metrics data.
-    """
-    return {
-        "device_count": DEVICE_COUNT,
-        "devices": [
-            {
-                "name": GPU_NAME,
-                "temperature": GPU_TEMPERATURE,
-                "power_usage": GPU_POWER_WATTS,
-                "memory_total": GPU_MEMORY_TOTAL,
-                "memory_used": GPU_MEMORY_USED,
-                "memory_free": GPU_MEMORY_FREE,
-                "utilization": GPU_UTILIZATION,
-                "memory_utilization": GPU_MEMORY_UTILIZATION,
-                "fan_speed": GPU_FAN_SPEED,
-            }
-        ],
-    }
-
-
-@pytest.fixture
-def mock_collector(mocker: MockerFixture, mock_gpu_metrics: dict) -> GPUCollector:
-    """Create a mocked GPU collector.
+def mock_gpu_nvml(mocker: "MockerFixture") -> "MockerFixture":
+    """Set up GPU NVML mocks.
 
     Args:
         mocker: Pytest mocker fixture.
-        mock_gpu_metrics: Mock GPU metrics data.
 
     Returns:
-        GPUCollector: Mocked collector instance.
+        MockerFixture: Mocked NVML module.
     """
-    # Mock pynvml to avoid actual GPU calls
-    mocker.patch("prod_health_guardian.collectors.gpu.pynvml")
+    mock = mocker.patch("prod_health_guardian.collectors.gpu.pynvml", autospec=True)
+    mock.nvmlInit.return_value = None
+    mock.nvmlDeviceGetCount.return_value = 1
 
-    # Create collector instance
-    collector = GPUCollector()
+    mock_handle = mocker.MagicMock()
+    mock.nvmlDeviceGetHandleByIndex.return_value = mock_handle
 
-    # Override collect_metrics to return our mock data
-    mocker.patch.object(
-        collector,
-        "collect_metrics",
-        return_value=mock_gpu_metrics,
-    )
+    mock.nvmlDeviceGetName.return_value = GPU_NAME.encode()
+    mock.nvmlDeviceGetTemperature.return_value = GPU_TEMP
+    # Convert watts to milliwatts for NVML
+    mock.nvmlDeviceGetPowerUsage.return_value = GPU_POWER * 1000
 
-    return collector
+    mock_memory = mocker.MagicMock()
+    mock_memory.total = GPU_MEM_TOTAL
+    mock_memory.used = GPU_MEM_USED
+    mock_memory.free = GPU_MEM_FREE
+    mock.nvmlDeviceGetMemoryInfo.return_value = mock_memory
+
+    mock_util = mocker.MagicMock()
+    mock_util.gpu = GPU_UTIL
+    mock_util.memory = GPU_MEM_UTIL
+    mock.nvmlDeviceGetUtilizationRates.return_value = mock_util
+
+    mock.nvmlDeviceGetFanSpeed.return_value = GPU_FAN
+
+    return mock
 
 
-def test_gpu_collector_metrics_with_gpu(
-    mock_collector: GPUCollector,
-    mock_gpu_metrics: dict,
-) -> None:
-    """Test GPU metrics collection with GPU available.
+@pytest.mark.asyncio
+async def test_gpu_collector_metrics(mock_gpu_nvml: "MockerFixture") -> None:
+    """Test GPU collector metrics collection.
 
     Args:
-        mock_collector: Mocked GPU collector.
-        mock_gpu_metrics: Expected GPU metrics.
+        mock_gpu_nvml: Mocked NVML fixture.
     """
-    metrics = mock_collector.collect_metrics()
+    collector = GPUCollector()
+    metrics = await collector.collect()
 
-    # Verify the metrics match our mock data
-    assert metrics == mock_gpu_metrics
+    # Validate metric structure
+    assert isinstance(metrics, dict)
+    assert all(isinstance(key, str) for key in metrics.keys())
+    assert all(isinstance(value, (int, float, str)) for value in metrics.values())
 
-    # Verify specific values
-    device = metrics["devices"][0]
-    assert device["name"] == GPU_NAME
-    assert device["temperature"] == GPU_TEMPERATURE
-    assert device["power_usage"] == GPU_POWER_WATTS
-    assert device["memory_total"] == GPU_MEMORY_TOTAL
-    assert device["memory_used"] == GPU_MEMORY_USED
-    assert device["memory_free"] == GPU_MEMORY_FREE
-    assert device["utilization"] == GPU_UTILIZATION
-    assert device["memory_utilization"] == GPU_MEMORY_UTILIZATION
-    assert device["fan_speed"] == GPU_FAN_SPEED
+    # Validate GPU metrics
+    assert metrics["name"] == GPU_NAME
+    assert metrics["temperature"] == GPU_TEMP
+    assert metrics["power_watts"] == GPU_POWER
+    assert metrics["memory_total"] == GPU_MEM_TOTAL
+    assert metrics["memory_used"] == GPU_MEM_USED
+    assert metrics["memory_free"] == GPU_MEM_FREE
+    assert metrics["gpu_utilization"] == GPU_UTIL
+    assert metrics["memory_utilization"] == GPU_MEM_UTIL
+    assert metrics["fan_speed"] == GPU_FAN
 
 
-def test_gpu_collector_metrics_no_gpu(mocker: MockerFixture) -> None:
-    """Test GPU metrics collection when no GPU is available.
+@pytest.mark.asyncio
+async def test_gpu_collector_no_gpu(mock_gpu_nvml: "MockerFixture") -> None:
+    """Test GPU collector when no GPU is available.
 
     Args:
-        mocker: Pytest mocker fixture.
+        mock_gpu_nvml: Mocked NVML fixture.
     """
-    # Mock pynvml with error
-    mock_pynvml = mocker.patch("prod_health_guardian.collectors.gpu.pynvml")
-    mock_pynvml.NVMLError = MockNVMLError
-    mock_pynvml.nvmlInit.side_effect = MockNVMLError("No NVIDIA driver found")
+    # Mock NVML initialization to fail
+    mock_gpu_nvml.nvmlInit.side_effect = pynvml.NVMLError_LibraryNotFound()
 
     collector = GPUCollector()
-    metrics = collector.collect_metrics()
+    metrics = await collector.collect()
 
-    assert metrics["device_count"] == 0
-    assert metrics["devices"] == []
+    # All metrics should be zero/default
+    assert metrics["name"] == "No GPU"
+    assert metrics["temperature"] == 0.0
+    assert metrics["power_watts"] == 0.0
+    assert metrics["memory_total"] == 0
+    assert metrics["memory_used"] == 0
+    assert metrics["memory_free"] == 0
+    assert metrics["gpu_utilization"] == 0.0
+    assert metrics["memory_utilization"] == 0.0
+    assert metrics["fan_speed"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_gpu_collector_no_power(mock_gpu_nvml: "MockerFixture") -> None:
+    """Test GPU collector when power information is not available.
+
+    Args:
+        mock_gpu_nvml: Mocked NVML fixture.
+    """
+    # Mock power usage to raise an exception
+    mock_gpu_nvml.nvmlDeviceGetPowerUsage.side_effect = pynvml.NVMLError_NotSupported()
+
+    collector = GPUCollector()
+    metrics = await collector.collect()
+
+    # Power should be 0, other metrics should be normal
+    assert metrics["name"] == GPU_NAME
+    assert metrics["power_watts"] == 0.0
+    assert metrics["memory_total"] == GPU_MEM_TOTAL
+    assert metrics["memory_used"] == GPU_MEM_USED
+    assert metrics["memory_free"] == GPU_MEM_FREE
+    assert metrics["gpu_utilization"] == GPU_UTIL
+    assert metrics["memory_utilization"] == GPU_MEM_UTIL
+    assert metrics["fan_speed"] == GPU_FAN

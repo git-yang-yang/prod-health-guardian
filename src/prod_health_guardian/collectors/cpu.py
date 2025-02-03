@@ -1,5 +1,7 @@
 """CPU metrics collector module."""
 
+from typing import Union
+
 import psutil
 
 from .base import BaseCollector
@@ -13,13 +15,9 @@ class CPUCollector(BaseCollector):
     - CPU frequencies (current, min, max)
     - CPU usage percentages (total and per-core)
     - CPU statistics (context switches, interrupts, etc.)
-
-    Args:
-        interval: Time interval in seconds for CPU percentage calculation.
-            Defaults to 0.1 seconds.
     """
 
-    def __init__(self, interval: float = 0.1) -> None:
+    def __init__(self, interval: float = 1.0) -> None:
         """Initialize CPU collector.
 
         Args:
@@ -35,45 +33,41 @@ class CPUCollector(BaseCollector):
         """
         return "cpu"
 
-    async def collect(self) -> dict:
+    async def collect(self) -> dict[str, Union[int, float, list[float]]]:
         """Collect CPU metrics.
 
         Returns:
-            dict: CPU metrics including core counts, frequencies,
-                usage percentages, and statistics.
+            dict[str, Union[int, float, list[float]]]: Dictionary of CPU metrics.
+                Contains core counts, frequencies, usage percentages, and stats.
         """
         # Get CPU counts
-        cpu_count = {
-            "physical": psutil.cpu_count(logical=False),
-            "logical": psutil.cpu_count(logical=True),
+        metrics = {
+            "physical_cores": psutil.cpu_count(logical=False),
+            "logical_cores": psutil.cpu_count(logical=True),
         }
 
         # Get CPU frequencies
         cpu_freq = psutil.cpu_freq()
-        frequencies = {
-            "current": float(cpu_freq.current) if cpu_freq else None,
-            "min": float(cpu_freq.min) if cpu_freq else None,
-            "max": float(cpu_freq.max) if cpu_freq else None,
-        }
+        if cpu_freq:
+            metrics["cpu_freq_current"] = float(cpu_freq.current)
+            metrics["cpu_freq_min"] = float(cpu_freq.min)
+            metrics["cpu_freq_max"] = float(cpu_freq.max)
+        else:
+            metrics["cpu_freq_current"] = 0.0
+            metrics["cpu_freq_min"] = 0.0
+            metrics["cpu_freq_max"] = 0.0
 
         # Get CPU usage percentages
-        cpu_percent = {
-            "total": psutil.cpu_percent(interval=self.interval),
-            "per_cpu": psutil.cpu_percent(interval=self.interval, percpu=True),
-        }
+        metrics["cpu_percent"] = psutil.cpu_percent(interval=self.interval)
+        metrics["per_cpu_percent"] = psutil.cpu_percent(
+            interval=self.interval, percpu=True
+        )
 
         # Get CPU statistics
         cpu_stats = psutil.cpu_stats()
-        stats = {
-            "ctx_switches": cpu_stats.ctx_switches,
-            "interrupts": cpu_stats.interrupts,
-            "soft_interrupts": cpu_stats.soft_interrupts,
-            "syscalls": cpu_stats.syscalls,
-        }
+        metrics["ctx_switches"] = cpu_stats.ctx_switches
+        metrics["interrupts"] = cpu_stats.interrupts
+        metrics["soft_interrupts"] = cpu_stats.soft_interrupts
+        metrics["syscalls"] = cpu_stats.syscalls
 
-        return {
-            "count": cpu_count,
-            "frequency": frequencies,
-            "percent": cpu_percent,
-            "stats": stats,
-        }
+        return metrics

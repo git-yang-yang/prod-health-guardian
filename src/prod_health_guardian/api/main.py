@@ -15,9 +15,9 @@ from prod_health_guardian.metrics import (
 from prod_health_guardian.models import (
     CPUMetrics,
     ErrorResponse,
+    GPUMetrics,
     HealthStatus,
     MemoryMetrics,
-    SystemMetrics,
 )
 
 app = FastAPI(
@@ -121,33 +121,38 @@ async def get_metrics() -> Response:
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate Prometheus metrics",
+            detail=f"Failed to generate Prometheus metrics: {e!s}",
         ) from e
 
 
 @app.get(
     "/metrics/json",
     tags=["Metrics"],
-    response_model=SystemMetrics,
+    response_model=dict[str, Union[CPUMetrics, MemoryMetrics, GPUMetrics]],
     responses={
-        200: {"model": SystemMetrics},
+        200: {"model": dict[str, Union[CPUMetrics, MemoryMetrics, GPUMetrics]]},
         500: {"model": ErrorResponse},
     },
 )
-async def get_json_metrics() -> SystemMetrics:
+async def get_json_metrics() -> dict[str, Union[CPUMetrics, MemoryMetrics, GPUMetrics]]:
     """Get system metrics in JSON format.
 
     This endpoint returns all system metrics in a structured JSON format,
     validated through Pydantic models.
 
     Returns:
-        SystemMetrics: Combined system metrics
+        dict: Combined system metrics
 
     Raises:
         HTTPException: If metrics collection fails
     """
     try:
-        return await metrics_collector.collect_metrics()
+        metrics = await metrics_collector.collect_metrics()
+        return {
+            "cpu": metrics.cpu,
+            "memory": metrics.memory,
+            "gpu": metrics.gpu,
+        }
     except Exception as e:
         raise HTTPException(
             status_code=500,

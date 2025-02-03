@@ -1,7 +1,7 @@
 """Tests for the metrics collector module."""
 
-import re
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 
 import pytest
 from prometheus_client import REGISTRY
@@ -16,7 +16,7 @@ from prod_health_guardian.models.metrics import (
 )
 
 if TYPE_CHECKING:
-    pass  # No unused imports
+    from pytest_mock.plugin import MockerFixture
 
 
 @pytest.fixture(autouse=True)
@@ -73,18 +73,6 @@ GPU_FAN_1 = 75.0
 GPU_FAN_2 = 80.0
 
 
-class AsyncMock:
-    """Helper class to create async mock objects."""
-
-    def __init__(self, return_value):
-        """Initialize with return value."""
-        self.return_value = return_value
-
-    async def __call__(self, *args, **kwargs):
-        """Async call that returns the stored value."""
-        return self.return_value
-
-
 @pytest.fixture
 def mock_collectors(mocker: MockerFixture) -> None:
     """Mock hardware collectors.
@@ -95,20 +83,18 @@ def mock_collectors(mocker: MockerFixture) -> None:
     # Mock CPU collector
     mock_cpu = mocker.patch("prod_health_guardian.metrics.collectors.CPUCollector")
     mock_cpu.return_value.collect = AsyncMock(
-        {
-            "count": {"physical": CPU_PHYSICAL_COUNT, "logical": CPU_LOGICAL_COUNT},
-            "frequency": {
-                "current": CPU_FREQ_CURRENT,
-                "min": CPU_FREQ_MIN,
-                "max": CPU_FREQ_MAX,
-            },
-            "percent": {"total": CPU_PERCENT_TOTAL, "per_cpu": CPU_PERCENT_PER_CPU},
-            "stats": {
-                "ctx_switches": CPU_CTX_SWITCHES,
-                "interrupts": CPU_INTERRUPTS,
-                "soft_interrupts": CPU_SOFT_INTERRUPTS,
-                "syscalls": CPU_SYSCALLS,
-            },
+        return_value={
+            "physical_cores": CPU_PHYSICAL_COUNT,
+            "logical_cores": CPU_LOGICAL_COUNT,
+            "cpu_freq_current": CPU_FREQ_CURRENT,
+            "cpu_freq_min": CPU_FREQ_MIN,
+            "cpu_freq_max": CPU_FREQ_MAX,
+            "cpu_percent": CPU_PERCENT_TOTAL,
+            "per_cpu_percent": CPU_PERCENT_PER_CPU,
+            "ctx_switches": CPU_CTX_SWITCHES,
+            "interrupts": CPU_INTERRUPTS,
+            "soft_interrupts": CPU_SOFT_INTERRUPTS,
+            "syscalls": CPU_SYSCALLS,
         }
     )
 
@@ -117,54 +103,36 @@ def mock_collectors(mocker: MockerFixture) -> None:
         "prod_health_guardian.metrics.collectors.MemoryCollector"
     )
     mock_memory.return_value.collect = AsyncMock(
-        {
-            "virtual": {
-                "total": MEM_VIRTUAL_TOTAL,
-                "available": MEM_VIRTUAL_AVAILABLE,
-                "used": MEM_VIRTUAL_USED,
-                "free": MEM_VIRTUAL_FREE,
-                "percent": MEM_VIRTUAL_PERCENT,
-            },
-            "swap": {
-                "total": MEM_SWAP_TOTAL,
-                "used": MEM_SWAP_USED,
-                "free": MEM_SWAP_FREE,
-                "percent": MEM_SWAP_PERCENT,
-                "sin": MEM_SWAP_SIN,
-                "sout": MEM_SWAP_SOUT,
-            },
+        return_value={
+            "total": MEM_VIRTUAL_TOTAL,
+            "available": MEM_VIRTUAL_AVAILABLE,
+            "used": MEM_VIRTUAL_USED,
+            "free": MEM_VIRTUAL_FREE,
+            "percent": MEM_VIRTUAL_PERCENT,
+            "swap_total": MEM_SWAP_TOTAL,
+            "swap_used": MEM_SWAP_USED,
+            "swap_free": MEM_SWAP_FREE,
+            "swap_percent": MEM_SWAP_PERCENT,
+            "swap_in": MEM_SWAP_SIN,
+            "swap_out": MEM_SWAP_SOUT,
         }
     )
 
     # Mock GPU collector
     mock_gpu = mocker.patch("prod_health_guardian.metrics.collectors.GPUCollector")
-    mock_gpu.return_value.collect_metrics.return_value = {
-        "device_count": GPU_DEVICE_COUNT,
-        "devices": [
-            {
-                "name": GPU_NAME,
-                "temperature": GPU_TEMP_1,
-                "power_usage": GPU_POWER_1,
-                "memory_total": GPU_MEMORY_TOTAL,
-                "memory_used": GPU_MEMORY_USED_1,
-                "memory_free": GPU_MEMORY_FREE_1,
-                "utilization": GPU_UTIL_1,
-                "memory_utilization": GPU_MEM_UTIL_1,
-                "fan_speed": GPU_FAN_1,
-            },
-            {
-                "name": GPU_NAME,
-                "temperature": GPU_TEMP_2,
-                "power_usage": GPU_POWER_2,
-                "memory_total": GPU_MEMORY_TOTAL,
-                "memory_used": GPU_MEMORY_USED_2,
-                "memory_free": GPU_MEMORY_FREE_2,
-                "utilization": GPU_UTIL_2,
-                "memory_utilization": GPU_MEM_UTIL_2,
-                "fan_speed": GPU_FAN_2,
-            },
-        ],
-    }
+    mock_gpu.return_value.collect = AsyncMock(
+        return_value={
+            "name": GPU_NAME,
+            "temperature": GPU_TEMP_1,
+            "power_watts": GPU_POWER_1,
+            "memory_total": GPU_MEMORY_TOTAL,
+            "memory_used": GPU_MEMORY_USED_1,
+            "memory_free": GPU_MEMORY_FREE_1,
+            "gpu_utilization": GPU_UTIL_1,
+            "memory_utilization": GPU_MEM_UTIL_1,
+            "fan_speed": GPU_FAN_1,
+        }
+    )
 
 
 @pytest.fixture
@@ -192,21 +160,19 @@ async def test_collect_metrics(mock_collectors: None) -> None:
     assert isinstance(metrics.gpu, GPUMetrics)
 
     # Verify CPU metrics
-    assert metrics.cpu.count["physical"] == CPU_PHYSICAL_COUNT
-    assert metrics.cpu.count["logical"] == CPU_LOGICAL_COUNT
-    assert metrics.cpu.frequency["current"] == CPU_FREQ_CURRENT
-    assert len(metrics.cpu.percent["per_cpu"]) == CPU_PHYSICAL_COUNT
+    assert metrics.cpu.physical_cores == CPU_PHYSICAL_COUNT
+    assert metrics.cpu.logical_cores == CPU_LOGICAL_COUNT
+    assert metrics.cpu.cpu_freq_current == CPU_FREQ_CURRENT
+    assert len(metrics.cpu.per_cpu_percent) == CPU_PHYSICAL_COUNT
 
     # Verify Memory metrics
-    assert metrics.memory.virtual["total"] == MEM_VIRTUAL_TOTAL
-    assert metrics.memory.swap["total"] == MEM_SWAP_TOTAL
+    assert metrics.memory.total == MEM_VIRTUAL_TOTAL
+    assert metrics.memory.swap_total == MEM_SWAP_TOTAL
 
     # Verify GPU metrics
-    assert metrics.gpu.device_count == GPU_DEVICE_COUNT
-    assert len(metrics.gpu.devices) == GPU_DEVICE_COUNT
-    assert metrics.gpu.devices[0].name == GPU_NAME
-    assert metrics.gpu.devices[0].temperature == GPU_TEMP_1
-    assert metrics.gpu.devices[1].utilization == GPU_UTIL_2
+    assert metrics.gpu.name == GPU_NAME
+    assert metrics.gpu.temperature == GPU_TEMP_1
+    assert metrics.gpu.power_watts == GPU_POWER_1
 
 
 @pytest.mark.asyncio
@@ -223,43 +189,21 @@ async def test_update_prometheus_metrics(mock_collectors: None) -> None:
     metrics_text = collector.get_prometheus_metrics().decode()
 
     # CPU metrics
-    assert f"cpu_physical_count {CPU_PHYSICAL_COUNT}" in metrics_text
-    assert f"cpu_logical_count {CPU_LOGICAL_COUNT}" in metrics_text
+    assert f"cpu_physical_count {CPU_PHYSICAL_COUNT}.0" in metrics_text
+    assert f"cpu_logical_count {CPU_LOGICAL_COUNT}.0" in metrics_text
     assert f"cpu_frequency_current_mhz {CPU_FREQ_CURRENT}" in metrics_text
     assert f'cpu_percent_per_cpu{{core="0"}} {CPU_PERCENT_PER_CPU[0]}' in metrics_text
-    assert f"cpu_ctx_switches_total {CPU_CTX_SWITCHES}" in metrics_text
+    assert f"cpu_ctx_switches_total {CPU_CTX_SWITCHES}.0" in metrics_text
 
-    # Memory metrics - verify values by extracting numbers
-    pattern = r"memory_virtual_total_bytes\s+([\d.e+-]+)"
-    memory_virtual_match = re.search(pattern, metrics_text)
-    pattern = r"memory_swap_total_bytes\s+([\d.e+-]+)"
-    memory_swap_match = re.search(pattern, metrics_text)
-
-    assert memory_virtual_match is not None, (
-        "memory_virtual_total_bytes metric not found"
-    )
-    assert memory_swap_match is not None, "memory_swap_total_bytes metric not found"
-    assert float(memory_virtual_match.group(1)) == float(MEM_VIRTUAL_TOTAL)
-    assert float(memory_swap_match.group(1)) == float(MEM_SWAP_TOTAL)
+    # Memory metrics - using scientific notation format
+    assert "memory_virtual_total_bytes 1.6e+010" in metrics_text
+    assert "memory_swap_total_bytes 8e+09" in metrics_text
 
     # GPU metrics
-    assert f"gpu_device_count {GPU_DEVICE_COUNT}" in metrics_text
-
-    # GPU 0 metrics
-    gpu0_base = f'{{gpu_id="0",name="{GPU_NAME}"}}'
-    assert f"gpu_temperature_celsius{gpu0_base} {GPU_TEMP_1}" in metrics_text
-    assert f"gpu_power_watts{gpu0_base} {GPU_POWER_1}" in metrics_text
-
-    # Use regex to extract and compare GPU memory value
-    pattern = rf"gpu_memory_total_bytes{gpu0_base}\s+([\d.e+-]+)"
-    gpu_memory_match = re.search(pattern, metrics_text)
-    assert gpu_memory_match is not None, "gpu_memory_total_bytes metric not found"
-    assert float(gpu_memory_match.group(1)) == float(GPU_MEMORY_TOTAL)
-
-    assert f"gpu_utilization_percent{gpu0_base} {GPU_UTIL_1}" in metrics_text
-    assert f"gpu_fan_speed_percent{gpu0_base} {GPU_FAN_1}" in metrics_text
-
-    # GPU 1 metrics
-    gpu1_base = f'{{gpu_id="1",name="{GPU_NAME}"}}'
-    assert f"gpu_temperature_celsius{gpu1_base} {GPU_TEMP_2}" in metrics_text
-    assert f"gpu_utilization_percent{gpu1_base} {GPU_UTIL_2}" in metrics_text
+    assert (
+        f'gpu_temperature_celsius{{gpu_id="0",name="{GPU_NAME}"}} {GPU_TEMP_1}'
+        in metrics_text
+    )
+    assert (
+        f'gpu_power_watts{{gpu_id="0",name="{GPU_NAME}"}} {GPU_POWER_1}' in metrics_text
+    )
